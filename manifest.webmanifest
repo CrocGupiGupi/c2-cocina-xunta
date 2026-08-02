@@ -1,9 +1,9 @@
 {
-  "id": "/test-auxiliar-cocina-xunta/",
+  "id": "./",
   "name": "Test Auxiliar de Cociña · Xunta de Galicia",
   "short_name": "Test Cociña",
   "description": "Preparación del proceso selectivo de auxiliar de cocina, subgrupo C2, de la Xunta de Galicia. Temario completo de los 22 temas, test por tema, simulacros oficiales con penalización, repaso espaciado y estadísticas. Bilingüe y sin conexión.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "display_override": [
