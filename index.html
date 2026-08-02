@@ -172,6 +172,16 @@ table.res tr:last-child td{border-bottom:0}
 .lec blockquote p:last-child{margin-bottom:0}
 .lec hr{border:0;border-top:1px solid var(--line);margin:22px 0}
 .lec a{color:var(--brand2);word-break:break-word}
+/* bloques plegables: el esquema queda a la vista y el detalle se abre a voluntad */
+.lec details{margin:12px 0;border:1px solid var(--line);border-radius:10px;background:var(--bg);overflow:hidden}
+.lec details>summary{cursor:pointer;padding:10px 12px;font-size:13.5px;font-weight:600;color:var(--brand2);list-style:none;user-select:none}
+.lec details>summary::-webkit-details-marker{display:none}
+.lec details>summary::before{content:'▸ ';display:inline-block;transition:transform .15s}
+.lec details[open]>summary::before{transform:rotate(90deg)}
+.lec details[open]>summary{border-bottom:1px solid var(--line)}
+.lec details>*:not(summary){padding:0 12px}
+.lec details>*:not(summary):first-of-type{padding-top:10px}
+.lec details>*:not(summary):last-child{padding-bottom:10px}
 .tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px 0;border:1px solid var(--line);border-radius:10px}
 .tw table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:340px}
 .tw th,.tw td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
@@ -230,8 +240,8 @@ table.res tr:last-child td{border-bottom:0}
 </nav>
 
 <div class="toast" id="toast"></div>
-<script src="preguntas.js?v=19"></script>
-<script src="temario.js?v=19"></script>
-<script src="app.js?v=19"></script>
+<script src="preguntas.js?v=21"></script>
+<script src="temario.js?v=21"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>
