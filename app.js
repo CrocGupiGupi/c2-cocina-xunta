@@ -57,6 +57,8 @@ const T = {
   seleccionar:'Seleccionar todos',ninguno:'Ninguno',parteG:'Parte general',parteE:'Parte específica',
   idioma:'Idioma',tema:'Aspecto',claro:'Claro',oscuro:'Oscuro',auto:'Automático',
   penal:'Penalizar errores',penalS:'Cada fallo resta 1/4 de acierto, como en el examen real',
+  soloVerif:'Solo preguntas verificadas',
+  soloVerifS:'Deja fuera las importadas del material de academia, que no están contrastadas una a una y llevan el tema asignado de forma automática',
   barajar:'Barajar las opciones',barajarS:'Cambia el orden de las respuestas cada vez',
   letra:'Tamaño de letra',exportar:'Exportar progreso',importar:'Importar progreso',
   borrar:'Borrar todo el progreso',borrarS:'No se puede deshacer',
@@ -109,6 +111,8 @@ const T = {
   seleccionar:'Seleccionar todos',ninguno:'Ningún',parteG:'Parte xeral',parteE:'Parte específica',
   idioma:'Idioma',tema:'Aspecto',claro:'Claro',oscuro:'Escuro',auto:'Automático',
   penal:'Penalizar erros',penalS:'Cada fallo resta 1/4 de acerto, como no exame real',
+  soloVerif:'Só preguntas verificadas',
+  soloVerifS:'Deixa fóra as importadas do material de academia, que non están contrastadas unha a unha e levan o tema asignado de forma automática',
   barajar:'Barallar as opcións',barajarS:'Cambia a orde das respostas cada vez',
   letra:'Tamaño de letra',exportar:'Exportar progreso',importar:'Importar progreso',
   borrar:'Borrar todo o progreso',borrarS:'Non se pode desfacer',
@@ -144,7 +148,7 @@ const T = {
 const LS='auxcocina_v1';
 const HOY=()=>new Date().toISOString().slice(0,10);
 const D={
-  cfg:{lang:'es',theme:'auto',penal:true,barajar:true,fs:16},
+  cfg:{lang:'es',theme:'auto',penal:true,barajar:true,fs:16,soloVerif:false},
   q:{},          // id -> {v:vistas, o:ok, k:ko, ef:facilidad, iv:intervalo, due:'YYYY-MM-DD', l:lapsos}
   marc:[],       // ids marcados
   hist:{},       // 'YYYY-MM-DD' -> {n:hechas, o:aciertos}
@@ -171,6 +175,10 @@ const BANCO=(window.BANCO||[]);
 function txt(p){return p[S.cfg.lang]||p.es||p.gl;}
 
 /* ---------- selección de preguntas ---------- */
+/* Distingue las preguntas redactadas y verificadas contra fuente oficial de
+   las importadas del material de preparación del opositor. */
+function esImportada(p){return !!(p.ref && p.ref.indexOf('Test de preparación')===0);}
+
 function pool(f){
   f=f||{};
   let a=BANCO.slice();
@@ -178,6 +186,9 @@ function pool(f){
   if(f.parte) a=a.filter(p=>(TEMAS[p.tema]||{}).p===f.parte);
   if(f.tipo) a=a.filter(p=>(p.tipo||'teorica')===f.tipo);
   if(f.ids) a=a.filter(p=>f.ids.includes(p.id));
+  // «Solo preguntas verificadas»: descarta las importadas del material de
+  // preparación, que no se han contrastado una a una contra fuente oficial.
+  if(S.cfg.soloVerif && !f.ids) a=a.filter(p=>!esImportada(p));
   return a;
 }
 function elegir(cand,n,priorizar){
@@ -276,6 +287,7 @@ function pintarPlay(){
     if(r!==p.r)h+=` — ${t('respCorr')}: <b>${'ABCD'[ord.indexOf(p.r)]}</b>`;
     if(c.exp)h+=`<div style="margin-top:6px">${esc(c.exp)}</div>`;
     if(p.ref)h+=`<span class="ref">${t('refFuente')}: ${esc(p.ref)}</span>`;
+    if(esImportada(p))h+=`<span class="ref" style="color:var(--warn)">${S.cfg.lang==='gl'?'⚠ Pregunta sen verificar contra fonte oficial e con tema asignado automaticamente':'⚠ Pregunta sin verificar contra fuente oficial y con el tema asignado automáticamente'}</span>`;
     if(TEM[p.tema])h+=`<button class="chip mini" id="bVerTema" style="margin-top:9px">📖 ${t('verTema')} ${p.tema}</button>`;
     h+=`</div>`;
     if(J.srs){
@@ -592,6 +604,7 @@ function pintarAjustes(){
      <select id="aTh"><option value="auto" ${S.cfg.theme==='auto'?'selected':''}>${t('auto')}</option><option value="light" ${S.cfg.theme==='light'?'selected':''}>${t('claro')}</option><option value="dark" ${S.cfg.theme==='dark'?'selected':''}>${t('oscuro')}</option></select></label>
    <label class="row"><span>${t('penal')}<small>${t('penalS')}</small></span><input type="checkbox" id="aPen" ${S.cfg.penal?'checked':''}></label>
    <label class="row"><span>${t('barajar')}<small>${t('barajarS')}</small></span><input type="checkbox" id="aBar" ${S.cfg.barajar?'checked':''}></label>
+   <label class="row"><span>${t('soloVerif')}<small>${t('soloVerifS')}</small></span><input type="checkbox" id="aVer" ${S.cfg.soloVerif?'checked':''}></label>
    <label class="row"><span>${t('letra')}</span><input type="range" id="aFs" min="14" max="21" value="${S.cfg.fs}"></label>
   </div>
   <div class="card"><h3>${S.cfg.lang==='gl'?'Datos':'Datos'}</h3>
@@ -612,6 +625,7 @@ function pintarAjustes(){
   $('#aTh').onchange=e=>{S.cfg.theme=e.target.value;guardar();aplicarTema();};
   $('#aPen').onchange=e=>{S.cfg.penal=e.target.checked;guardar();};
   $('#aBar').onchange=e=>{S.cfg.barajar=e.target.checked;guardar();};
+  $('#aVer').onchange=e=>{S.cfg.soloVerif=e.target.checked;guardar();pintarInicio();toast(t('guardado'));};
   $('#aFs').oninput=e=>{S.cfg.fs=+e.target.value;document.documentElement.style.setProperty('--fs',S.cfg.fs+'px');guardar();};
   $('#aExp').onclick=()=>{
     const b=new Blob([JSON.stringify(S)],{type:'application/json'});
