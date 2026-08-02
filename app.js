@@ -681,6 +681,24 @@ function buscarTemario(q){
               :`<div class="vacio">${t('sinRes')}</div>`;
 }
 
+/* Lleva a un ancla dentro del tema abierto.
+   Primero busca el id exacto; si no aparece, reintenta ignorando tildes,
+   para que un enlace como «#2-explicación» encuentre igualmente su destino
+   aunque el ancla se hubiera generado sin acentos. Devuelve el elemento
+   encontrado, o null si no hay ninguno. */
+function irAAncla(destino){
+  let id=destino;
+  try{id=decodeURIComponent(destino);}catch(e){}
+  let el=document.getElementById(id);
+  if(!el){
+    const sinTildes=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const buscado=sinTildes(id);
+    el=[...document.querySelectorAll('#lcuerpo [id]')].find(n=>sinTildes(n.id)===buscado)||null;
+  }
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  return el;
+}
+
 function abrirTema(k,scrollY,resaltar){
   const d=TEM[k]; if(!d){toast(t('sinPreg'));return;}
   S.lec={tema:k,y:0}; guardar();
@@ -709,8 +727,18 @@ function abrirTema(k,scrollY,resaltar){
     iniciar({lista:l,modo:'estudio',titulo:k+' · '+nom(k)});};
   $('#idx').querySelectorAll('[data-a]').forEach(a=>a.onclick=ev=>{
     ev.preventDefault();
-    const el=document.getElementById(a.dataset.a);
-    if(el){$('#idx').style.display='none';el.scrollIntoView({behavior:'smooth',block:'start'});}
+    const el=irAAncla(a.dataset.a);
+    if(el)$('#idx').style.display='none';
+  });
+  /* Índice que va dentro del propio documento: los enlaces «#…» del markdown.
+     Se resuelve por delegación en #lcuerpo para que siga funcionando después
+     de que el buscador vuelva a pintar el cuerpo. */
+  $('#lcuerpo').addEventListener('click',ev=>{
+    const a=ev.target.closest('a[href^="#"]');
+    if(!a)return;
+    const destino=a.getAttribute('href').slice(1);
+    if(!destino)return;
+    if(irAAncla(destino))ev.preventDefault();
   });
   const lq=$('#lq');
   lq.oninput=()=>{

@@ -1,5 +1,5 @@
 /* Service worker: permite usar la aplicación sin conexión */
-const CACHE = 'auxcocina-v17';
+const CACHE = 'auxcocina-v18';
 const FILES = ['./','./index.html','./app.js','./preguntas.js','./temario.js','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
