@@ -6,8 +6,8 @@
    cache:'reload' para saltarse también la caché HTTP del navegador, y el
    index.html se sirve siempre desde la red cuando la hay, de modo que las
    referencias a la versión nueva lleguen aunque el resto esté cacheado. */
-const CACHE = 'auxcocina-v36';
-const FILES = ['./','./index.html','./app.js?v=36','./preguntas.js?v=36','./temario.js?v=36','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png'];
+const CACHE = 'auxcocina-v43';
+const FILES = ['./','./index.html','./app.js?v=43','./preguntas.js?v=43','./temario.js?v=43','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
