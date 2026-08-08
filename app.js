@@ -182,9 +182,7 @@ function esImportada(p){return !!(p.ref && p.ref.indexOf('Test de preparación')
 function pool(f){
   f=f||{};
   let a=BANCO.slice();
-  /* Ojo: una lista de temas vacía significa «ningún tema», no «todos». Por eso
-     se comprueba que sea un array, no que tenga elementos. */
-  if(Array.isArray(f.temas)) a=a.filter(p=>f.temas.includes(p.tema));
+  if(f.temas&&f.temas.length) a=a.filter(p=>f.temas.includes(p.tema));
   if(f.parte) a=a.filter(p=>(TEMAS[p.tema]||{}).p===f.parte);
   if(f.tipo) a=a.filter(p=>(p.tipo||'teorica')===f.tipo);
   if(f.ids) a=a.filter(p=>f.ids.includes(p.id));
@@ -448,11 +446,9 @@ function pintarInicio(){
   const b=$('#qFall'); if(b)b.onclick=()=>iniciar({lista:mezclar(falladas()).slice(0,25),modo:'estudio',titulo:t('falladas')});
 }
 
-/* null = todavía no se ha elegido nada, así que se parte de todo marcado.
-   [] = el usuario ha pulsado «Ninguno» y hay que respetarlo. */
-let selTemas=null;
+let selTemas=[];
 function pintarTest(){
-  if(selTemas===null)selTemas=Object.keys(TEMAS);
+  if(!selTemas.length)selTemas=Object.keys(TEMAS);
   const cont=k=>pool({temas:[k]}).length;
   let h=`<div class="card"><h2>${t('porTema')}</h2><p>${t('porTemaS')}</p>
     <div class="fila" style="margin:10px 0">
@@ -471,12 +467,12 @@ function pintarTest(){
   const disp=pool({temas:selTemas}).length;
   h+=`<div class="card">
     <label class="row"><span>${t('numPreg')}<small>${disp} ${S.cfg.lang==='gl'?'dispoñibles':'disponibles'}</small></span>
-      <select id="nP">${[10,20,25,30,40,50,60,80,100].filter(n=>disp&&n<=Math.max(10,disp)).map(n=>`<option ${n===20?'selected':''}>${n}</option>`).join('')}<option value="0">${t('todos')}</option></select></label>
+      <select id="nP">${[10,20,25,30,40,50,60,80,100].filter(n=>n<=Math.max(10,disp)).map(n=>`<option ${n===20?'selected':''}>${n}</option>`).join('')}<option value="0">${t('todos')}</option></select></label>
     <label class="row"><span>${t('modo')}<small id="modoS">${t('modoEstS')}</small></span>
       <select id="mo"><option value="estudio">${t('modoEst')}</option><option value="examen">${t('modoEx')}</option></select></label>
     <label class="row" id="rTiempo" style="display:none"><span>${t('tiempo')}<small>${t('minutos')}</small></span>
       <input type="number" id="mins" value="30" min="1" max="240"></label>
-    <button class="btn" id="go" style="margin-top:12px" ${disp?'':'disabled'}>${t('empezar')}</button></div>`;
+    <button class="btn" id="go" style="margin-top:12px">${t('empezar')}</button></div>`;
   $('#v-test').innerHTML=h;
   $('#v-test').querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{
     const k=b.dataset.t,i=selTemas.indexOf(k);
@@ -491,7 +487,6 @@ function pintarTest(){
     $('#modoS').textContent=ex?t('modoExS'):t('modoEstS');};
   $('#go').onclick=()=>{
     const cand=pool({temas:selTemas});
-    if(!cand.length)return;
     let n=+$('#nP').value||cand.length;
     const modo=$('#mo').value;
     iniciar({lista:elegir(cand,n,true),modo,titulo:t('porTema'),
