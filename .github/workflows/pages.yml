@@ -1,0 +1,53 @@
+# Despliegue de la aplicación en GitHub Pages.
+#
+# Sustituye al build clásico («Deploy from a branch»), que quedó atascado tras la
+# incidencia de GitHub del 6 de agosto de 2026. Este flujo publica el contenido
+# de la raíz del repositorio, que es donde está index.html.
+#
+# Para que funcione hay que cambiar una vez el origen en la web:
+#   Settings → Pages → Build and deployment → Source: GitHub Actions
+#
+# A partir de ahí, cada push a main despliega. También se puede lanzar a mano
+# desde la pestaña Actions con «Run workflow».
+
+name: Desplegar en Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permisos mínimos que necesita el despliegue.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Si llega un push mientras hay otro despliegue en marcha, se deja terminar el
+# que está en curso y se encola solo el último. Así no se acumula cola.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Empaquetar el sitio
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Publicar
+        id: despliegue
+        uses: actions/deploy-pages@v4
