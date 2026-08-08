@@ -60,7 +60,7 @@ const T = {
   soloVerif:'Solo preguntas verificadas',
   soloVerifS:'Deja fuera las importadas del material de academia, que no están contrastadas una a una y llevan el tema asignado de forma automática',
   barajar:'Barajar las opciones',barajarS:'Cambia el orden de las respuestas cada vez',
-  letra:'Tamaño de letra',exportar:'Exportar progreso',importar:'Importar progreso',
+  letra:'Tamaño de letra',letraS:'Afecta a los enunciados, las opciones y el temario. La barra inferior no cambia.',exportar:'Exportar progreso',importar:'Importar progreso',
   borrar:'Borrar todo el progreso',borrarS:'No se puede deshacer',
   confirmBorrar:'¿Seguro que quieres borrar todo tu progreso?',
   sinPreg:'Todavía no hay preguntas para esta selección',
@@ -114,7 +114,7 @@ const T = {
   soloVerif:'Só preguntas verificadas',
   soloVerifS:'Deixa fóra as importadas do material de academia, que non están contrastadas unha a unha e levan o tema asignado de forma automática',
   barajar:'Barallar as opcións',barajarS:'Cambia a orde das respostas cada vez',
-  letra:'Tamaño de letra',exportar:'Exportar progreso',importar:'Importar progreso',
+  letra:'Tamaño de letra',letraS:'Afecta aos enunciados, ás opcións e ao temario. A barra inferior non cambia.',exportar:'Exportar progreso',importar:'Importar progreso',
   borrar:'Borrar todo o progreso',borrarS:'Non se pode desfacer',
   confirmBorrar:'Seguro que queres borrar todo o teu progreso?',
   sinPreg:'Aínda non hai preguntas para esta selección',
@@ -369,7 +369,7 @@ function pintarFin(ok,ko,bl,seg){
     <div class="sub">${J.titulo||''}</div>`;
   if(of){
     const puntos=Math.max(0,neto)/n*of.max;
-    h+=`<div style="margin-top:12px;font-size:26px;font-weight:700">${puntos.toFixed(2)} <span style="font-size:14px;color:var(--muted)">/ ${of.max} ${t('puntuacion').toLowerCase()}</span></div>
+    h+=`<div style="margin-top:12px;font-size:1.625rem;font-weight:700">${puntos.toFixed(2)} <span style="font-size:.875rem;color:var(--muted)">/ ${of.max} ${t('puntuacion').toLowerCase()}</span></div>
         <div class="veredicto ${pct>=of.min?'ap':'no'}">${pct>=of.min?t('apto'):t('noapto')}</div>
         <p class="mini" style="margin-top:8px">${S.cfg.lang==='gl'?'Mínimo esixido':'Mínimo exigido'}: ${of.min}% · ${of.minP} ${t('puntuacion').toLowerCase()}</p>`;
   }
@@ -553,7 +553,7 @@ function pintarRepaso(){
   h+=`<button class="btn sec" id="r4">${t('sinVer')}<small>${sinver} ${t('preg')}</small></button>`;
   if(marc.length){
     h+=`<div class="card"><h3>${t('marcadas')}</h3>`;
-    marc.slice(0,20).forEach(p=>{h+=`<div style="padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px">
+    marc.slice(0,20).forEach(p=>{h+=`<div style="padding:8px 0;border-bottom:1px solid var(--line);font-size:.8438rem">
       <span class="mini">${p.tema}</span><br>${esc(txt(p).q.slice(0,110))}${txt(p).q.length>110?'…':''}</div>`;});
     h+=`</div>`;
   }
@@ -614,7 +614,8 @@ function pintarAjustes(){
    <label class="row"><span>${t('penal')}<small>${t('penalS')}</small></span><input type="checkbox" id="aPen" ${S.cfg.penal?'checked':''}></label>
    <label class="row"><span>${t('barajar')}<small>${t('barajarS')}</small></span><input type="checkbox" id="aBar" ${S.cfg.barajar?'checked':''}></label>
    <label class="row"><span>${t('soloVerif')}<small>${t('soloVerifS')}</small></span><input type="checkbox" id="aVer" ${S.cfg.soloVerif?'checked':''}></label>
-   <label class="row"><span>${t('letra')}</span><input type="range" id="aFs" min="14" max="21" value="${S.cfg.fs}"></label>
+   <label class="row"><span>${t('letra')}<small id="aFsV">${S.cfg.fs} px</small></span><input type="range" id="aFs" min="14" max="24" step="1" value="${S.cfg.fs}"></label>
+   <p class="mini" style="margin:2px 2px 0">${t('letraS')}</p>
   </div>
   <div class="card"><h3>${S.cfg.lang==='gl'?'Datos':'Datos'}</h3>
    <button class="btn sec" id="aExp">⬇ ${t('exportar')}</button>
@@ -635,7 +636,7 @@ function pintarAjustes(){
   $('#aPen').onchange=e=>{S.cfg.penal=e.target.checked;guardar();};
   $('#aBar').onchange=e=>{S.cfg.barajar=e.target.checked;guardar();};
   $('#aVer').onchange=e=>{S.cfg.soloVerif=e.target.checked;guardar();pintarInicio();toast(t('guardado'));};
-  $('#aFs').oninput=e=>{S.cfg.fs=+e.target.value;document.documentElement.style.setProperty('--fs',S.cfg.fs+'px');guardar();};
+  $('#aFs').oninput=e=>{aplicarLetra(+e.target.value);$('#aFsV').textContent=S.cfg.fs+' px';guardar();};
   $('#aExp').onclick=()=>{
     const b=new Blob([JSON.stringify(S)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(b);
@@ -657,12 +658,12 @@ function pintarTemario(){
   h+=`<input class="buscar" id="bq" type="search" placeholder="${t('buscarTemario')}" autocomplete="off">`;
   h+=`<div id="bres"></div><div id="blista">`;
   if(S.lec&&TEM[S.lec.tema]){
-    h+=`<h3 style="margin:6px 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${t('ultimaVez')}</h3>`;
+    h+=`<h3 style="margin:6px 0 8px;font-size:.8125rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${t('ultimaVez')}</h3>`;
     h+=tarjetaTema(S.lec.tema);
   }
-  h+=`<h3 style="margin:16px 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${t('parteG')}</h3>`;
+  h+=`<h3 style="margin:16px 0 8px;font-size:.8125rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${t('parteG')}</h3>`;
   claves.filter(k=>TEMAS[k].p==='general').forEach(k=>h+=tarjetaTema(k));
-  h+=`<h3 style="margin:16px 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${t('parteE')}</h3>`;
+  h+=`<h3 style="margin:16px 0 8px;font-size:.8125rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${t('parteE')}</h3>`;
   claves.filter(k=>TEMAS[k].p==='especifica').forEach(k=>h+=tarjetaTema(k));
   h+=`</div>`;
   $('#v-temario').innerHTML=h;
@@ -798,8 +799,16 @@ function aplicarTema(){
   document.documentElement.dataset.theme=dark?'dark':'light';
   const m=document.querySelector('meta[name=theme-color]');if(m)m.content=dark?'#111614':'#0b3d2e';
 }
+/* Fija el tamaño de referencia del documento. Toda la hoja de estilos está en
+   rem, así que con esto escalan enunciados, opciones, temario y menús. Se
+   acota el valor por si llega estropeado de una copia de seguridad antigua. */
+function aplicarLetra(px){
+  const v=Math.min(24,Math.max(14,+px||16));
+  S.cfg.fs=v;
+  document.documentElement.style.setProperty('--fs',v+'px');
+}
 function aplicarCfg(){
-  document.documentElement.style.setProperty('--fs',S.cfg.fs+'px');
+  aplicarLetra(S.cfg.fs);
   document.documentElement.lang=S.cfg.lang==='gl'?'gl':'es';
   $('#bLang').textContent=S.cfg.lang==='es'?'GL':'ES';
   aplicarTema();
