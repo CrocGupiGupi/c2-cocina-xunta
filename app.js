@@ -191,6 +191,9 @@ function pool(f){
   // «Solo preguntas verificadas»: descarta las importadas del material de
   // preparación, que no se han contrastado una a una contra fuente oficial.
   if(S.cfg.soloVerif && !f.ids) a=a.filter(p=>!esImportada(p));
+  /* Preguntas cuyo texto quedó incompleto en el PDF de origen y no se pudo
+     recuperar: se excluyen siempre, salvo que se pidan por id expresamente. */
+  if(!f.ids) a=a.filter(p=>!p.inc);
   return a;
 }
 function elegir(cand,n,priorizar){
@@ -289,6 +292,7 @@ function pintarPlay(){
     if(r!==p.r)h+=` — ${t('respCorr')}: <b>${'ABCD'[ord.indexOf(p.r)]}</b>`;
     if(c.exp)h+=`<div style="margin-top:6px">${esc(c.exp)}</div>`;
     if(p.ref)h+=`<span class="ref">${t('refFuente')}: ${esc(p.ref)}</span>`;
+    if(p.inc)h+=`<span class="ref" style="color:var(--ko)">${S.cfg.lang==='gl'?'⚠ O texto desta pregunta quedou incompleto no PDF de orixe e non se puido recuperar':'⚠ El texto de esta pregunta quedó incompleto en el PDF de origen y no se pudo recuperar'}</span>`;
     if(esImportada(p))h+=`<span class="ref" style="color:var(--warn)">${S.cfg.lang==='gl'?'⚠ Pregunta sen verificar contra fonte oficial e con tema asignado automaticamente':'⚠ Pregunta sin verificar contra fuente oficial y con el tema asignado automáticamente'}</span>`;
     if(TEM[p.tema])h+=`<button class="chip mini" id="bVerTema" style="margin-top:9px">📖 ${t('verTema')} ${p.tema}</button>`;
     h+=`</div>`;
