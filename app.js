@@ -719,7 +719,12 @@ function irAAncla(destino){
     const buscado=sinTildes(id);
     el=[...document.querySelectorAll('#lcuerpo [id]')].find(n=>sinTildes(n.id)===buscado)||null;
   }
-  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  if(el){
+    /* Si el ancla cae dentro de un bloque plegado, se abre antes de saltar. */
+    let d=el.closest('details');
+    while(d){d.open=true; d=d.parentElement&&d.parentElement.closest('details');}
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+  }
   return el;
 }
 
@@ -742,6 +747,14 @@ function abrirTema(k,scrollY,resaltar){
   (d.i||[]).forEach(x=>{h+=`<a href="#${x.i}" class="${x.n===2?'n2':''}" data-a="${x.i}">${esc(x.t)}</a>`;});
   h+=`</div><div class="lec" id="lcuerpo">${cuerpo}</div>`;
   $('#v-lectura').innerHTML=h;
+  /* Si se llega al tema desde el buscador global, la coincidencia puede estar
+     dentro de un bloque plegado. Se abre para que se vea. */
+  if(resaltar&&resaltar.length>2){
+    $('#lcuerpo').querySelectorAll('mark').forEach(m=>{
+      let dd=m.closest('details');
+      while(dd){dd.open=true; dd=dd.parentElement&&dd.parentElement.closest('details');}
+    });
+  }
   ir('lectura');
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==='temario'));
   $('#lVolver').onclick=()=>{if(J&&J._vuelta){J._vuelta=false;ir('play');pintarPlay();}else ir('temario');};
@@ -773,7 +786,16 @@ function abrirTema(k,scrollY,resaltar){
       c=c.replace(re,'<mark>$1</mark>');
     }
     $('#lcuerpo').innerHTML=c;
-    if(v.length>2){const m=$('#lcuerpo mark'); if(m)m.scrollIntoView({behavior:'smooth',block:'center'});}
+    if(v.length>2){
+      /* Los bloques <details> con material exhaustivo van plegados. Si la
+         coincidencia está dentro de uno, hay que abrirlo: si no, el usuario ve
+         el contador de resultados pero no encuentra nada en pantalla. */
+      $('#lcuerpo').querySelectorAll('mark').forEach(m=>{
+        let d=m.closest('details');
+        while(d){d.open=true; d=d.parentElement&&d.parentElement.closest('details');}
+      });
+      const m=$('#lcuerpo mark'); if(m)m.scrollIntoView({behavior:'smooth',block:'center'});
+    }
   };
   window.scrollTo(0,scrollY||0);
 }
