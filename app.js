@@ -422,18 +422,22 @@ function pintarInicio(){
   const h0=S.hist[HOY()]||{n:0,o:0};
   let tv=0,to=0; Object.values(S.q).forEach(e=>{tv+=e.v;to+=e.o;});
   const pend=pendientesHoy().length, fall=falladas().length;
-  let h=`<div class="grid g2" style="margin-bottom:12px">
-    <div class="stat"><b>${S.racha.d===HOY()||S.racha.d===sumar(-1)?S.racha.n:0}</b><span>${t('racha')} · ${t('dias')}</span></div>
-    <div class="stat"><b>${h0.n}</b><span>${t('hoy')}</span></div>
-    <div class="stat"><b>${tv?Math.round(to/tv*100):0}%</b><span>${t('acierto')}</span></div>
-    <div class="stat"><b>${tv}</b><span>${t('hechas')}</span></div>
+  const gl=S.cfg.lang==='gl';
+  let h=`<div class="reg">
+    <div><b>${S.racha.d===HOY()||S.racha.d===sumar(-1)?S.racha.n:0}</b><span>${t('racha')} · ${t('dias')}</span></div>
+    <div><b>${h0.n}</b><span>${t('hoy')}</span></div>
+    <div><b>${tv?Math.round(to/tv*100):0}%</b><span>${t('acierto')}</span></div>
+    <div><b>${tv}</b><span>${t('hechas')}</span></div>
   </div>`;
-  h+=`<button class="btn" id="qRapido">${t('nuevoTest')}<small>${t('nuevoTestS')}</small></button>`;
-  if(pend)h+=`<button class="btn gold" id="qPend">${t('pendientes')} · ${pend}<small>${t('repasoS')}</small></button>`;
-  h+=`<button class="btn sec" id="qTemario">📖 ${t('temario')}<small>${S.lec&&TEM[S.lec.tema]?t('seguirLeyendo')+': '+S.lec.tema+' · '+esc(nom(S.lec.tema)):t('temarioS')}</small></button>`;
-  h+=`<button class="btn sec" id="qTema">${t('porTema')}<small>${t('porTemaS')}</small></button>`;
-  h+=`<button class="btn sec" id="qSimu">${t('simu')}<small>${t('simuS')}</small></button>`;
-  if(fall)h+=`<button class="btn sec" id="qFall">${t('falladas')} · ${fall}<small>${S.cfg.lang==='gl'?'As que máis se che resisten':'Las que más se te resisten'}</small></button>`;
+  if(pend)h+=`<button class="etiq" id="qPend"><b>${pend}</b><span>${t('pendientes')}</span><small>${t('repasoS')}</small></button>`;
+  else h+=`<button class="btn" id="qRapido">${t('nuevoTest')}<small>${t('nuevoTestS')}</small></button>`;
+  h+=`<div class="lista">`;
+  if(pend)h+=`<button class="btn" id="qRapido">${t('nuevoTest')}<small>${t('nuevoTestS')}</small></button>`;
+  h+=`<button class="btn" id="qTemario">${t('temario')}<small>${S.lec&&TEM[S.lec.tema]?t('seguirLeyendo')+': '+S.lec.tema+' · '+esc(nom(S.lec.tema)):t('temarioS')}</small></button>`;
+  h+=`<button class="btn" id="qTema">${t('porTema')}<small>${t('porTemaS')}</small></button>`;
+  h+=`<button class="btn" id="qSimu">${t('simu')}<small>${t('simuS')}</small></button>`;
+  if(fall)h+=`<button class="btn" id="qFall">${t('falladas')} · ${fall}<small>${gl?'As que máis se che resisten':'Las que más se te resisten'}</small></button>`;
+  h+=`</div>`;
   if(S.ses.length){
     h+=`<div class="card"><h3>${S.cfg.lang==='gl'?'Últimas sesións':'Últimas sesiones'}</h3><table class="res">`;
     S.ses.slice(0,5).forEach(x=>{const pc=x.n?Math.round(x.ok/x.n*100):0;
@@ -441,7 +445,7 @@ function pintarInicio(){
           <td style="color:${pc>=70?'var(--ok)':pc>=50?'var(--warn)':'var(--ko)'}">${pc}%</td></tr>`;});
     h+=`</table></div>`;
   }
-  h+=`<button class="btn ghost" id="qAjustes">⚙ ${t('ajustes')}</button>`;
+  h+=`<button class="btn ghost" id="qAjustes">${t('ajustes')}</button>`;
   $('#v-inicio').innerHTML=h;
   $('#qRapido').onclick=()=>iniciar({lista:elegir(pool({}),20,true),modo:'estudio',titulo:t('nuevoTest')});
   $('#qTemario').onclick=()=>{if(S.lec&&TEM[S.lec.tema])abrirTema(S.lec.tema,S.lec.y);else ir('temario');};
@@ -819,7 +823,7 @@ function abrirTema(k,scrollY,resaltar){
 function aplicarTema(){
   const dark=S.cfg.theme==='dark'||(S.cfg.theme==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);
   document.documentElement.dataset.theme=dark?'dark':'light';
-  const m=document.querySelector('meta[name=theme-color]');if(m)m.content=dark?'#111614':'#0b3d2e';
+  const m=document.querySelector('meta[name=theme-color]');if(m)m.content=dark?'#13372c':'#0f5b45';
 }
 /* Fija el tamaño de referencia del documento. Toda la hoja de estilos está en
    rem, así que con esto escalan enunciados, opciones, temario y menús. Se
