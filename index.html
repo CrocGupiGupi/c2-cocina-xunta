@@ -255,6 +255,26 @@ table.res tr:last-child td{border-bottom:0}
 .tema-c .fl{color:var(--muted);font-size:1.125rem}
 #arriba{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));width:48px;height:48px;border-radius:var(--r);background:var(--brand);color:#fff;border:0;font-size:1.1875rem;box-shadow:0 3px 12px rgba(0,0,0,.28);display:none;z-index:55}
 #arriba.on{display:block}
+/* ---------- escritorio y tableta apaisada: barra lateral en lugar de la inferior ---------- */
+header{min-height:63px}
+#v-lectura{max-width:calc(80ch + 48px)}
+@media(min-width:1000px){
+  :root{--rail:220px}
+  body{padding-bottom:0}
+  header{padding-left:24px;padding-right:24px}
+  .nav{top:63px;right:auto;width:var(--rail);flex-direction:column;gap:2px;padding:14px 10px;border-top:0;border-right:1px solid var(--line);z-index:40}
+  .nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:14px;min-height:48px;padding:10px 14px;font-size:1rem;border-top:0;border-left:4px solid transparent;border-radius:var(--r)}
+  .nav button svg{width:22px;height:22px;flex:none}
+  .nav button.on{border-left-color:var(--accent);background:color-mix(in srgb,var(--brand2) 10%,transparent)}
+  main{max-width:none;margin:0 0 0 var(--rail);padding:28px 40px 64px}
+  main>.view{max-width:980px}
+  main>#v-lectura{max-width:calc(80ch + 48px)}
+  #arriba{bottom:24px}
+  .toast{bottom:24px}
+  .lista{display:grid;grid-template-columns:1fr 1fr}
+  .lista .btn{border-top:0;border-bottom:1px solid var(--line)}
+  .lista .btn:nth-child(odd){border-right:1px solid var(--line)}
+}
 @media print{.nav,header,#barra,.lbar,#arriba{display:none}.lec{border:0;box-shadow:none;padding:0}}
 </style>
 </head>
@@ -288,8 +308,8 @@ table.res tr:last-child td{border-bottom:0}
 </nav>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="preguntas.js?v=98"></script>
-<script src="temario.js?v=98"></script>
-<script src="app.js?v=98"></script>
+<script src="preguntas.js?v=99"></script>
+<script src="temario.js?v=99"></script>
+<script src="app.js?v=99"></script>
 </body>
 </html>
