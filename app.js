@@ -29,7 +29,7 @@ const TEMAS = {
   E12:{es:'Ley 1/2024 calidad alimentaria · APPCC',gl:'Lei 1/2024 calidade alimentaria · APPCC',p:'especifica'},
   E13:{es:'Alérgenos e información alimentaria',gl:'Alérxenos e información alimentaria',p:'especifica'},
   E14:{es:'Temperaturas y toma de muestras',gl:'Temperaturas e toma de mostras',p:'especifica'},
-  E15:{es:'Programa de gestión CENPOS',gl:'Programa de xestión CENPOS',p:'especifica'}
+  E15:{es:'CENPOS (tema suprimido del programa)',gl:'CENPOS (tema suprimido do programa)',p:'especifica'}
 };
 
 /* ---------- textos de la interfaz ---------- */
