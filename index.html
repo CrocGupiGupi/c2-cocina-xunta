@@ -25,7 +25,7 @@
   --brand:#0f5b45; --brand2:#0f5b45; --head:#0f5b45; --accent:#f2b705; --accent-txt:#2a2000;
   --ok:#1b7a4b; --ko:#c62828; --warn:#a15c00;
   --line:#cbd3d8; --shadow:0 1px 0 rgba(20,32,43,.06);
-  --r:6px; --fs:16px;
+  --r:6px; --fs:16px; --pad:14px; --hh:calc(3.9375rem + env(safe-area-inset-top));
   --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --cuerpo:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
@@ -41,7 +41,7 @@ html,body{margin:0;padding:0}
    referencia del documento, todos los rem de la hoja de estilos escalan con
    él: enunciados, opciones, temario y menús. Antes --fs solo afectaba a body
    y no se notaba, porque cada elemento traía su tamaño en px. */
-html{font-size:var(--fs);scroll-padding:70px 0 84px;color-scheme:light}
+html{font-size:clamp(var(--fs),calc(var(--fs) * .5 + .55vw),calc(var(--fs) * 1.75));scroll-padding:calc(var(--hh) + 8px) 0 84px;color-scheme:light}
 html[data-theme="dark"]{color-scheme:dark}
 body{
   background:var(--bg);color:var(--txt);
@@ -60,13 +60,13 @@ header{
 }
 header h1{font:700 1.375rem/1.1 var(--display);margin:0;flex:1;letter-spacing:.01em}
 header h1 small{display:block;font:400 .75rem/1.3 var(--cuerpo);opacity:.85;letter-spacing:0}
-.hbtn{background:rgba(255,255,255,.14);border:0;border-radius:var(--r);min-width:44px;min-height:44px;padding:7px 10px;font-size:.8125rem;font-weight:600;color:#fff}
+.hbtn{background:rgba(255,255,255,.14);border:0;border-radius:var(--r);min-width:2.75rem;min-height:2.75rem;padding:7px 10px;font-size:.8125rem;font-weight:600;color:#fff}
 .hbtn:active{background:rgba(255,255,255,.28)}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 header :focus-visible,.nav :focus-visible{outline-color:#fff}
 
 /* ---------- contenedor ---------- */
-main{max-width:820px;margin:0 auto;padding:14px}
+main{max-width:820px;margin:0 auto;padding:var(--pad)}
 .view{display:none}
 .view.on{display:block}
 @media(prefers-reduced-motion:no-preference){.view.on{animation:fade .15s ease}}
@@ -133,7 +133,7 @@ input[type=range]{width:130px;accent-color:var(--brand2)}
 .chip.mini{padding:6px 10px;min-height:32px;font-size:.8125rem}
 
 /* ---------- test ---------- */
-#barra{position:sticky;top:0;z-index:20;background:var(--bg);padding:8px 0 10px;margin:-14px -14px 4px;padding-left:14px;padding-right:14px;border-bottom:1px solid var(--line)}
+#barra{position:sticky;top:var(--hh);z-index:20;background:var(--bg);padding:8px var(--pad) 10px;margin:calc(-1 * var(--pad)) calc(-1 * var(--pad)) 4px;border-bottom:1px solid var(--line)}
 .brow{display:flex;justify-content:space-between;align-items:center;font-size:.7812rem;color:var(--muted);margin-bottom:6px;gap:10px}
 .brow b{color:var(--txt)}
 #reloj.alerta{color:var(--ko);font-weight:700}
@@ -240,7 +240,7 @@ table.res tr:last-child td{border-bottom:0}
 #idx a{display:block;padding:6px 0;font-size:.875rem;text-decoration:none;border-bottom:1px solid var(--line)}
 #idx a:last-child{border-bottom:0}
 #idx a.n2{padding-left:14px;font-size:.8125rem;color:var(--muted)}
-.lbar{position:sticky;top:0;z-index:20;background:var(--bg);margin:-14px -14px 10px;padding:10px 14px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.lbar{position:sticky;top:var(--hh);z-index:20;background:var(--bg);margin:calc(-1 * var(--pad)) calc(-1 * var(--pad)) 10px;padding:10px var(--pad);border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
 .lbar b{flex:1;font-size:.875rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .buscar{width:100%;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px 13px;font:inherit;font-size:.9375rem;color:var(--txt);margin-bottom:10px}
 .res-b{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
@@ -255,26 +255,125 @@ table.res tr:last-child td{border-bottom:0}
 .tema-c .fl{color:var(--muted);font-size:1.125rem}
 #arriba{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));width:48px;height:48px;border-radius:var(--r);background:var(--brand);color:#fff;border:0;font-size:1.1875rem;box-shadow:0 3px 12px rgba(0,0,0,.28);display:none;z-index:55}
 #arriba.on{display:block}
-/* ---------- escritorio y tableta apaisada: barra lateral en lugar de la inferior ---------- */
-header{min-height:63px}
-#v-lectura{max-width:calc(80ch + 48px)}
-@media(min-width:1000px){
-  :root{--rail:220px}
-  body{padding-bottom:0}
-  header{padding-left:24px;padding-right:24px}
-  .nav{top:63px;right:auto;width:var(--rail);flex-direction:column;gap:2px;padding:14px 10px;border-top:0;border-right:1px solid var(--line);z-index:40}
-  .nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:14px;min-height:48px;padding:10px 14px;font-size:1rem;border-top:0;border-left:4px solid transparent;border-radius:var(--r)}
-  .nav button svg{width:22px;height:22px;flex:none}
-  .nav button.on{border-left-color:var(--accent);background:color-mix(in srgb,var(--brand2) 10%,transparent)}
-  main{max-width:none;margin:0 0 0 var(--rail);padding:28px 40px 64px}
-  main>.view{max-width:980px}
-  main>#v-lectura{max-width:calc(80ch + 48px)}
-  #arriba{bottom:24px}
-  .toast{bottom:24px}
+/* ============================================================
+   ADAPTATIVO
+   Puntos de ruptura: 340 (teléfono muy estrecho) · 600 (tableta
+   vertical) · 1000 (barra lateral) · 1200 (dos columnas) · 1450+
+   (la escala del texto crece con el ancho, hasta 4K).
+   Los anchos de contenedor van en rem y en ch para que guarden
+   proporción con el texto en cualquier pantalla.
+   ============================================================ */
+header{min-height:3.9375rem}
+#v-lectura{max-width:calc(80ch + 3rem)}
+main>.view{margin-inline:auto}
+
+/* Cursor: estados de paso solo donde hay ratón */
+@media(hover:hover){
+  .lista .btn:hover,.tema-c:hover,.chip:hover,.res-b:hover{background:color-mix(in srgb,var(--brand2) 8%,var(--card))}
+  .btn:hover{background:color-mix(in srgb,var(--brand) 88%,#000)}
+  .btn.sec:hover,.btn.ghost:hover{background:color-mix(in srgb,var(--brand2) 8%,var(--card))}
+  .opt:not(:disabled):hover{border-color:var(--brand2);border-left-color:var(--brand2)}
+  .etiq:hover{background:color-mix(in srgb,var(--accent) 12%,var(--card))}
+  .chip.on:hover{background:var(--brand)}
+  .nav button:hover{color:var(--txt)}
+}
+
+/* Teléfonos muy estrechos (320-340 px) */
+@media(max-width:340px){
+  :root{--pad:10px}
+  .reg{grid-template-columns:repeat(2,1fr)}
+  .reg div:nth-child(3){border-left:0}
+  .reg div:nth-child(n+3){border-top:1px solid var(--line)}
+  .nav button{font-size:11px}
+  header h1{font-size:1.125rem}
+  .btn,.etiq{padding-left:12px;padding-right:12px}
+}
+@media(max-width:380px){ .reg span{white-space:normal} }
+
+/* Teléfono apaisado: poca altura, así que se compacta la cabecera y la barra inferior */
+@media(max-height:500px) and (orientation:landscape) and (max-width:999px){
+  :root{--hh:calc(52px + env(safe-area-inset-top))}
+  header{min-height:52px;padding-top:calc(4px + env(safe-area-inset-top));padding-bottom:4px}
+  header h1 small{display:none}
+  .hbtn{min-height:40px}
+  body{padding-bottom:calc(52px + env(safe-area-inset-bottom))}
+  .nav{padding-top:2px;padding-bottom:calc(2px + env(safe-area-inset-bottom))}
+  .nav button{flex-direction:row;justify-content:center;gap:6px;min-height:44px;font-size:12px}
+  .nav button svg{width:20px;height:20px}
+  main{padding-left:max(var(--pad),env(safe-area-inset-left));padding-right:max(var(--pad),env(safe-area-inset-right))}
+}
+
+/* Tableta vertical y teléfono grande (600-999 px): una columna más ancha y accesos en dos columnas */
+@media(min-width:600px) and (max-width:999px){
+  :root{--pad:22px}
+  main{max-width:46rem}
   .lista{display:grid;grid-template-columns:1fr 1fr}
   .lista .btn{border-top:0;border-bottom:1px solid var(--line)}
   .lista .btn:nth-child(odd){border-right:1px solid var(--line)}
+  #blista{display:grid;grid-template-columns:1fr 1fr;gap:0 .75rem}
+  #blista>h3{grid-column:1/-1}
+  .nav{justify-content:center;gap:1rem}
+  .nav button{flex:0 1 7.5rem}
 }
+
+/* Escritorio y tableta apaisada (>=1000 px): barra lateral en lugar de la inferior */
+@media(min-width:1000px){
+  :root{--rail:14rem;--pad:2.5rem}
+  body{padding-bottom:0}
+  header{padding-left:1.5rem;padding-right:1.5rem}
+  .nav{top:var(--hh);right:auto;width:var(--rail);flex-direction:column;justify-content:flex-start;gap:2px;padding:1rem .625rem;border-top:0;border-right:1px solid var(--line);z-index:40;overflow-y:auto}
+  .nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:.875rem;min-height:3rem;padding:.625rem .875rem;font-size:1rem;border-top:0;border-left:4px solid transparent;border-radius:var(--r)}
+  .nav button svg{width:1.375rem;height:1.375rem;flex:none}
+  .nav button.on{border-left-color:var(--accent);background:color-mix(in srgb,var(--brand2) 10%,transparent)}
+  main{max-width:none;margin:0 0 0 var(--rail);padding:1.75rem var(--pad) 4rem}
+  main>.view{max-width:62rem}
+  main>#v-play,main>#v-fin,main>#v-ajustes,main>#v-simulacro,main>#v-repaso{max-width:48rem}
+  #barra,.lbar{margin-inline:0;padding-inline:0;margin-top:calc(-1.75rem);padding-top:.75rem}
+  #arriba{bottom:1.5rem;right:1.5rem}
+  .toast{bottom:1.5rem}
+  .lista{display:grid;grid-template-columns:1fr 1fr}
+  .lista .btn{border-top:0;border-bottom:1px solid var(--line)}
+  .lista .btn:nth-child(odd){border-right:1px solid var(--line)}
+  #blista{display:grid;grid-template-columns:repeat(auto-fill,minmax(21rem,1fr));gap:0 .875rem}
+  #blista>h3{grid-column:1/-1}
+}
+
+/* Pantallas anchas (>=1200 px): paneles en dos columnas */
+@media(min-width:1200px){
+  main>#v-inicio,main>#v-test,main>#v-stats,main>#v-temario{max-width:80rem}
+
+  /* Inicio: lectura del día y accesos a la izquierda, historial a la derecha */
+  #v-inicio.on{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:0 1.75rem;align-items:start}
+  #v-inicio>*{grid-column:1}
+  #v-inicio>.reg{grid-column:1/-1}
+  #v-inicio>.card{grid-column:2;grid-row:2 / span 4}
+
+  /* Test por tema: temas a la izquierda, configuración fija a la derecha */
+  #v-test.on{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(19rem,1fr);gap:0 1.75rem;align-items:start}
+  #v-test>.card:last-child{position:sticky;top:calc(var(--hh) + 1rem)}
+
+  /* Datos */
+  #v-stats.on{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 1.75rem;align-items:start}
+  #v-stats>.card:nth-child(3){grid-column:2;grid-row:1 / span 2}
+  #v-stats>.btn{grid-column:1/-1}
+
+  /* Lector: texto y, al lado, el índice del tema siempre visible */
+  main>#v-lectura{max-width:calc(80ch + 3rem + 2rem + 17rem)}
+  #v-lectura.on{display:grid;grid-template-columns:minmax(0,calc(80ch + 3rem)) 17rem;gap:0 2rem;align-items:start}
+  #v-lectura>.lbar,#v-lectura>.buscar{grid-column:1/-1}
+  #v-lectura>.lec{grid-column:1;grid-row:3}
+  #v-lectura>#idx{display:block!important;grid-column:2;grid-row:3;position:sticky;top:calc(var(--hh) + 5.5rem);max-height:calc(100vh - var(--hh) - 7rem);max-height:calc(100dvh - var(--hh) - 7rem)}
+  #lIdx{display:none}
+  #blista{grid-template-columns:repeat(auto-fill,minmax(23rem,1fr))}
+}
+
+/* Pantallas muy anchas: la barra lateral y el contenido ganan aire */
+@media(min-width:1800px){
+  main>#v-inicio,main>#v-test,main>#v-stats,main>#v-temario{max-width:88rem}
+}
+
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+
 @media print{.nav,header,#barra,.lbar,#arriba{display:none}.lec{border:0;box-shadow:none;padding:0}}
 </style>
 </head>
@@ -308,8 +407,8 @@ header{min-height:63px}
 </nav>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="preguntas.js?v=99"></script>
-<script src="temario.js?v=99"></script>
-<script src="app.js?v=99"></script>
+<script src="preguntas.js?v=100"></script>
+<script src="temario.js?v=100"></script>
+<script src="app.js?v=100"></script>
 </body>
 </html>
