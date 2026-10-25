@@ -444,6 +444,9 @@ function pintarInicio(){
       h+=`<tr><td>${esc(x.tit||'Test')}<br><span class="mini">${x.f} · ${x.n} ${t('preg')}</span></td>
           <td style="color:${pc>=70?'var(--ok)':pc>=50?'var(--warn)':'var(--ko)'}">${pc}%</td></tr>`;});
     h+=`</table></div>`;
+  }else{
+    /* Sin historial: en pantallas anchas el panel derecho no queda vacío */
+    h+=`<div class="card solo-ancho"><h3>${gl?'O teu historial':'Tu historial'}</h3><p>${gl?'Aínda non fixeches ningún test. Aquí aparecerán as túas últimas sesións e a evolución do acerto.':'Todavía no has hecho ningún test. Aquí aparecerán tus últimas sesiones y la evolución del acierto.'}</p><p>${gl?'Un bo comezo: o test rápido, con 20 preguntas de todo o temario.':'Un buen comienzo: el test rápido, con 20 preguntas de todo el temario.'}</p></div>`;
   }
   h+=`<button class="btn ghost" id="qAjustes">${t('ajustes')}</button>`;
   $('#v-inicio').innerHTML=h;

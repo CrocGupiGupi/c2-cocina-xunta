@@ -338,6 +338,7 @@ main>.view{margin-inline:auto}
   #blista>h3{grid-column:1/-1}
 }
 
+.solo-ancho{display:none}
 /* Pantallas anchas (>=1200 px): paneles en dos columnas */
 @media(min-width:1200px){
   main>#v-inicio,main>#v-test,main>#v-stats,main>#v-temario{max-width:80rem}
@@ -347,6 +348,7 @@ main>.view{margin-inline:auto}
   #v-inicio>*{grid-column:1}
   #v-inicio>.reg{grid-column:1/-1}
   #v-inicio>.card{grid-column:2;grid-row:2 / span 4}
+  #v-inicio>.solo-ancho{display:block}
 
   /* Test por tema: temas a la izquierda, configuración fija a la derecha */
   #v-test.on{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(19rem,1fr);gap:0 1.75rem;align-items:start}
@@ -364,6 +366,7 @@ main>.view{margin-inline:auto}
   #v-lectura>.lec{grid-column:1;grid-row:3}
   #v-lectura>#idx{display:block!important;grid-column:2;grid-row:3;position:sticky;top:calc(var(--hh) + 5.5rem);max-height:calc(100vh - var(--hh) - 7rem);max-height:calc(100dvh - var(--hh) - 7rem)}
   #lIdx{display:none}
+  #idx:empty{display:none!important}
   #blista{grid-template-columns:repeat(auto-fill,minmax(23rem,1fr))}
 }
 
@@ -407,8 +410,8 @@ main>.view{margin-inline:auto}
 </nav>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="preguntas.js?v=100"></script>
-<script src="temario.js?v=100"></script>
-<script src="app.js?v=100"></script>
+<script src="preguntas.js?v=101"></script>
+<script src="temario.js?v=101"></script>
+<script src="app.js?v=101"></script>
 </body>
 </html>
