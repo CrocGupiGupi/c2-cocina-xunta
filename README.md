@@ -9,7 +9,7 @@ Funciona en ordenador, móvil Android, tablet e iPad. Se instala como aplicació
 ## Qué incluye
 
 - **Temario completo**: los 22 temas con texto literal de los artículos, explicación, esquemas y trampas de examen. Con índice por secciones y búsqueda en todo el temario.
-- **607 preguntas** tipo test, bilingües en castellano y gallego, con explicación y referencia a la fuente en cada una.
+- **1.947 preguntas** tipo test, bilingües en castellano y gallego, con explicación y referencia a la fuente en cada una.
 - **Simulacro oficial**: réplica del examen real. Primer ejercicio de 80 preguntas (20 generales + 60 específicas), segundo de 40 prácticas, penalización de un cuarto por error y 160 minutos.
 - **Repaso espaciado**, cuaderno de falladas y marcadas, estadísticas por tema y racha de días.
 

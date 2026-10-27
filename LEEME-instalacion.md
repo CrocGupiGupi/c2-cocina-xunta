@@ -102,15 +102,14 @@ La penalización se puede desactivar en Ajustes mientras estudias, pero conviene
 
 ## 6. Estado del banco de preguntas
 
-**607 preguntas** bilingües a 1 de agosto de 2026.
+**1.947 preguntas** bilingües a 27 de octubre de 2026 (5 de ellas ocultas: las 4 del tema 15 suprimido y E12-083, irrecuperable).
 
 | Bloque | Preguntas |
 |---|---|
-| Parte general (temas G1-G8) | 196 |
-| Parte específica (temas E1-E14) | 411 |
-| De las anteriores, de tipo práctico | 198 |
+| Parte general (temas G1-G8) | 590 |
+| Parte específica (temas E1-E14) | 1.353 |
 
-Con este volumen puedes hacer casi **10 primeros ejercicios completos** sin que se repita ninguna pregunta general, **6,8** sin repetir específicas y **5 segundos ejercicios** sin repetir prácticas.
+El reparto por tema se ve en la propia app (Estadísticas) y con `node tools/validar_preguntas.js`.
 
 El tema 15 (CENPOS) **fue suprimido del programa** por la Resolución de 26/01/2026 (DOG 17, de 27/01/2026). Sus 4 preguntas quedan ocultas en el banco (`inc:1`) y no salen en los test; si el tema volviera en la convocatoria 2026-27, se reactivan quitando esa marca.
 
