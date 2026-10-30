@@ -15,21 +15,20 @@ const TEMAS = {
   G6:{es:'Ley 7/2023 igualdad efectiva',gl:'Lei 7/2023 igualdade efectiva',p:'general'},
   G7:{es:'RDL 1/2013 derechos discapacidad',gl:'RDL 1/2013 dereitos discapacidade',p:'general'},
   G8:{es:'Ley 31/1995 prevención riesgos laborales',gl:'Lei 31/1995 prevención riscos laborais',p:'general'},
-  E1:{es:'Alimentación, salud y desarrollo',gl:'Alimentación, saúde e desenvolvemento',p:'especifica'},
-  E2:{es:'Cocinas, utensilios y manipulación',gl:'Cociñas, utensilios e manipulación',p:'especifica'},
-  E3:{es:'Despensas, frigoríficos y marcha adelante',gl:'Despensas, frigoríficos e marcha adiante',p:'especifica'},
+  E1:{es:'Alimentación y nutrición · menús · dietas · alérgenos',gl:'Alimentación e nutrición · menús · dietas · alérxenos',p:'especifica'},
+  E2:{es:'Tipos de cocina, maquinaria y presentación',gl:'Tipos de cociña, maquinaria e presentación',p:'especifica'},
+  E3:{es:'Economato, despensas y almacenaje refrigerado',gl:'Economato, despensas e almacenaxe refrixerada',p:'especifica'},
   E4:{es:'Condimentos, especias, salsas y fondos',gl:'Condimentos, especias, salsas e fondos',p:'especifica'},
-  E5:{es:'Consomés, sopas y cremas',gl:'Consomés, sopas e cremas',p:'especifica'},
-  E6:{es:'Hortalizas, verduras y ensaladas',gl:'Hortalizas, verduras e ensaladas',p:'especifica'},
-  E7:{es:'Legumbres secas y potajes',gl:'Legumes secos e potaxes',p:'especifica'},
-  E8:{es:'Pasta, arroz y huevos',gl:'Pasta, arroz e ovos',p:'especifica'},
-  E9:{es:'Pescados y mariscos',gl:'Peixes e mariscos',p:'especifica'},
-  E10:{es:'Las carnes',gl:'As carnes',p:'especifica'},
-  E11:{es:'Postres y bebidas',gl:'Sobremesas e bebidas',p:'especifica'},
+  E5:{es:'Consomés, sopas, cremas y potajes · legumbres',gl:'Consomés, sopas, cremas e potaxes · legumes',p:'especifica'},
+  E6:{es:'Hortalizas, frutas y verduras · ensaladas',gl:'Hortalizas, froitas e verduras · ensaladas',p:'especifica'},
+  E7:{es:'Pasta, arroz y huevos',gl:'Pasta, arroz e ovos',p:'especifica'},
+  E8:{es:'Pescados y mariscos',gl:'Peixes e mariscos',p:'especifica'},
+  E9:{es:'Las carnes',gl:'As carnes',p:'especifica'},
+  E10:{es:'Postres y bebidas',gl:'Sobremesas e bebidas',p:'especifica'},
+  E11:{es:'Manipulación, residuos y circulación',gl:'Manipulación, residuos e circulación',p:'especifica'},
   E12:{es:'Ley 1/2024 calidad alimentaria · APPCC',gl:'Lei 1/2024 calidade alimentaria · APPCC',p:'especifica'},
   E13:{es:'Alérgenos e información alimentaria',gl:'Alérxenos e información alimentaria',p:'especifica'},
-  E14:{es:'Temperaturas y toma de muestras',gl:'Temperaturas e toma de mostras',p:'especifica'},
-  E15:{es:'CENPOS (tema suprimido del programa)',gl:'CENPOS (tema suprimido do programa)',p:'especifica'}
+  E14:{es:'Temperaturas y toma de muestras',gl:'Temperaturas e toma de mostras',p:'especifica'}
 };
 
 /* ---------- textos de la interfaz ---------- */
@@ -54,7 +53,7 @@ const T = {
   numPreg:'Número de preguntas',modo:'Modo',modoEst:'Estudio',modoEx:'Examen',
   modoEstS:'Ves la respuesta y la explicación al momento',
   modoExS:'Sin corrección hasta el final, con cronómetro',
-  seleccionar:'Seleccionar todos',ninguno:'Ninguno',parteG:'Parte general',parteE:'Parte específica',
+  seleccionar:'Seleccionar todos',ninguno:'Ninguno',anexos:'Anexos y consulta',parteG:'Parte general',parteE:'Parte específica',
   idioma:'Idioma',tema:'Aspecto',claro:'Claro',oscuro:'Oscuro',auto:'Automático',
   penal:'Penalizar errores',penalS:'Cada fallo resta 1/4 de acierto, como en el examen real',
   soloVerif:'Solo preguntas verificadas',
@@ -108,7 +107,7 @@ const T = {
   numPreg:'Número de preguntas',modo:'Modo',modoEst:'Estudo',modoEx:'Exame',
   modoEstS:'Ves a resposta e a explicación ao momento',
   modoExS:'Sen corrección ata o final, con cronómetro',
-  seleccionar:'Seleccionar todos',ninguno:'Ningún',parteG:'Parte xeral',parteE:'Parte específica',
+  seleccionar:'Seleccionar todos',ninguno:'Ningún',anexos:'Anexos e consulta',parteG:'Parte xeral',parteE:'Parte específica',
   idioma:'Idioma',tema:'Aspecto',claro:'Claro',oscuro:'Escuro',auto:'Automático',
   penal:'Penalizar erros',penalS:'Cada fallo resta 1/4 de acerto, como no exame real',
   soloVerif:'Só preguntas verificadas',
@@ -658,10 +657,17 @@ function pintarAjustes(){
    TEMARIO · lectura de los temas completos
    ========================================================= */
 const TEM = (window.TEMARIO||{});
+const ANX = (window.ANEXOS||{});
+const CONV = (window.CONVOCATORIA||null);
+/* Un anexo se lee con el mismo visor que un tema, pero no es un tema:
+   no entra en los test ni cuenta en el progreso. */
+const doc = k => TEM[k] || ANX[k];
+const esAnexo = k => !!ANX[k] && !TEM[k];
 
 function pintarTemario(){
   const claves=Object.keys(TEMAS).filter(k=>TEM[k]);
   let h=`<div class="card"><h2>📖 ${t('temario')}</h2><p>${t('temarioS')}</p></div>`;
+  h+=fichaConvocatoria();
   h+=`<input class="buscar" id="bq" type="search" placeholder="${t('buscarTemario')}" autocomplete="off">`;
   h+=`<div id="bres"></div><div id="blista">`;
   if(S.lec&&TEM[S.lec.tema]){
@@ -672,9 +678,15 @@ function pintarTemario(){
   claves.filter(k=>TEMAS[k].p==='general').forEach(k=>h+=tarjetaTema(k));
   h+=`<h3 style="margin:16px 0 8px;font-size:.8125rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${t('parteE')}</h3>`;
   claves.filter(k=>TEMAS[k].p==='especifica').forEach(k=>h+=tarjetaTema(k));
+  const anx=Object.keys(ANX);
+  if(anx.length){
+    h+=`<h3 style="margin:16px 0 8px;font-size:.8125rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${t('anexos')}</h3>`;
+    anx.forEach(k=>h+=tarjetaAnexo(k));
+  }
   h+=`</div>`;
   $('#v-temario').innerHTML=h;
   $('#v-temario').querySelectorAll('[data-tema]').forEach(b=>b.onclick=()=>abrirTema(b.dataset.tema));
+  if($('#qConv'))$('#qConv').onclick=()=>abrirTema('A0');
   const q=$('#bq');
   q.oninput=()=>{
     const v=q.value.trim();
@@ -684,6 +696,43 @@ function pintarTemario(){
     $('#bres').querySelectorAll('[data-ir]').forEach(b=>b.onclick=()=>abrirTema(b.dataset.ir,0,v));
   };
 }
+/* Los anexos se enseñan como tarjetas, igual que los temas, pero sin número
+   de preguntas: no son materia de examen, son material de consulta. */
+function tarjetaAnexo(k){
+  const d=ANX[k]||{}, n=(d.i||[]).length;
+  const ico={A0:'🗓️',A1:'🔀',A2:'📋',A3:'🔪'}[k]||'📎';
+  return `<button class="tema-c anx" data-tema="${k}">
+    <span class="cod">${ico}</span>
+    <span class="tx"><b>${esc(d.t||k)}</b><small>${n} ${t('secciones')}</small></span>
+    <span class="fl">›</span></button>`;
+}
+
+/* Resumen de la convocatoria en cabecera del temario. Los datos vienen de
+   app/convocatoria.js, que genera tools/convocatoria.py desde un único
+   fichero de datos: cuando la Xunta publique algo, se cambia allí. */
+function fichaConvocatoria(){
+  if(!CONV)return '';
+  const gl=S.cfg.lang==='gl';
+  const hito=(CONV.hitos||[]).find(x=>x.estado==='abierto')||
+             (CONV.hitos||[]).find(x=>x.estado==='previsto')||{};
+  const ej=CONV.ejercicios||[];
+  return `<button class="card conv" id="qConv">
+    <div class="conv-t"><b>${esc(CONV.nombre||'')}</b>
+      <span>${gl?'Como funciona':'Cómo funciona'} ›</span></div>
+    <div class="conv-g">
+      <div><b>${CONV.plazas.total}</b><span>${gl?'prazas':'plazas'}</span></div>
+      <div><b>${ej.length}</b><span>${gl?'exercicios':'ejercicios'}</span></div>
+      <div><b>${ej.length?ej[0].preguntas+'+'+(ej[1]?ej[1].preguntas:0):''}</b><span>${gl?'preguntas':'preguntas'}</span></div>
+      <div><b>200</b><span>${gl?'puntos máx.':'puntos máx.'}</span></div>
+    </div>
+    <div class="conv-p">${gl
+      ?'<b>Ollo:</b> hai un <b>terceiro exercicio práctico de cociña</b> —un menú completo en 60 minutos— e unha <b>proba de galego</b> (Celga 3).'
+      :'<b>Ojo:</b> hay un <b>tercer ejercicio práctico de cocina</b> —un menú completo en 60 minutos— y una <b>prueba de gallego</b> (Celga 3).'}</div>
+    <div class="conv-p">${gl?'Seguinte fito':'Próximo hito'}: <b>${esc(hito.fecha||'—')}</b> · ${esc(hito.que||'')}</div>
+    <div class="conv-c">${gl?'Última revisión do DOG':'Última revisión del DOG'}: ${esc(CONV.comprobado||'')}</div>
+  </button>`;
+}
+
 function tarjetaTema(k){
   const d=TEM[k]||{},n=(d.i||[]).length;
   return `<button class="tema-c ${TEMAS[k].p==='especifica'?'esp':''}" data-tema="${k}">
@@ -736,8 +785,8 @@ function irAAncla(destino){
 }
 
 function abrirTema(k,scrollY,resaltar){
-  const d=TEM[k]; if(!d){toast(t('sinPreg'));return;}
-  S.lec={tema:k,y:0}; guardar();
+  const d=doc(k); if(!d){toast(t('sinPreg'));return;}
+  if(!esAnexo(k)){S.lec={tema:k,y:0}; guardar();}
   let cuerpo=d.x;
   if(resaltar&&resaltar.length>2){
     const re=new RegExp('(?![^<]*>)('+resaltar.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig');
@@ -745,9 +794,9 @@ function abrirTema(k,scrollY,resaltar){
   }
   let h=`<div class="lbar">
     <button class="chip mini" id="lVolver">‹</button>
-    <b>${k} · ${esc(nom(k))}</b>
+    <b>${esAnexo(k)?esc(d.t):k+' · '+esc(nom(k))}</b>
     <button class="chip mini" id="lIdx">${t('indice')}</button>
-    <button class="chip mini" id="lTest">${t('test')}</button>
+    ${esAnexo(k)?'':`<button class="chip mini" id="lTest">${t('test')}</button>`}
   </div>`;
   h+=`<input class="buscar" id="lq" type="search" placeholder="${t('buscarEn')}" autocomplete="off">`;
   h+=`<div id="idx" style="display:none">`;
@@ -766,7 +815,7 @@ function abrirTema(k,scrollY,resaltar){
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==='temario'));
   $('#lVolver').onclick=()=>{if(J&&J._vuelta){J._vuelta=false;ir('play');pintarPlay();}else ir('temario');};
   $('#lIdx').onclick=()=>{const e=$('#idx');e.style.display=e.style.display==='none'?'block':'none';};
-  $('#lTest').onclick=()=>{const l=elegir(pool({temas:[k]}),20,true);
+  if($('#lTest'))$('#lTest').onclick=()=>{const l=elegir(pool({temas:[k]}),20,true);
     if(!l.length){toast(t('sinPreg'));return;}
     iniciar({lista:l,modo:'estudio',titulo:k+' · '+nom(k)});};
   $('#idx').querySelectorAll('[data-a]').forEach(a=>a.onclick=ev=>{
