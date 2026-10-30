@@ -153,11 +153,34 @@ const D={
   hist:{},       // 'YYYY-MM-DD' -> {n:hechas, o:aciertos}
   racha:{d:'',n:0},
   ses:[],        // últimas sesiones
-  lec:null       // última lectura del temario {tema, y}
+  lec:null,      // última lectura del temario {tema, y}
+  migr:[]        // marcas de window.MIGRA_IDS ya aplicadas
 };
 let S=JSON.parse(JSON.stringify(D));
+/* Cuando una revisión del banco mueve una pregunta a otro tema, su id cambia.
+   window.MIGRA_IDS (en preguntas.js) trae el mapa viejo → nuevo; se aplica una
+   sola vez por marca para no perder el progreso ni las marcadas. */
+function migrarIds(nuevo){
+  const L=window.MIGRA_IDS||[];
+  if(!Array.isArray(S.migr))S.migr=[];
+  let cambio=false;
+  L.forEach(m=>{
+    if(S.migr.includes(m.marca))return;
+    if(!nuevo){
+      // los ids nuevos nunca coinciden con uno antiguo (se numeran tras el mayor del banco previo)
+      const q={};
+      Object.keys(S.q).forEach(id=>{q[m.mapa[id]||id]=S.q[id];});
+      S.q=q;
+      S.marc=S.marc.map(id=>m.mapa[id]||id).filter((id,i,a)=>a.indexOf(id)===i);
+    }
+    S.migr.push(m.marca);cambio=true;
+  });
+  return cambio;
+}
 function cargar(){
-  try{const r=localStorage.getItem(LS);if(r)S=Object.assign(JSON.parse(JSON.stringify(D)),JSON.parse(r));}catch(e){}
+  let r=null;
+  try{r=localStorage.getItem(LS);if(r)S=Object.assign(JSON.parse(JSON.stringify(D)),JSON.parse(r));}catch(e){}
+  try{if(migrarIds(!r))guardar();}catch(e){}
 }
 function guardar(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
 const t=k=>T[S.cfg.lang][k]||k;
@@ -177,6 +200,11 @@ function txt(p){return p[S.cfg.lang]||p.es||p.gl;}
 /* Distingue las preguntas redactadas y verificadas contra fuente oficial de
    las importadas del material de preparación del opositor. */
 function esImportada(p){return !!(p.ref && p.ref.indexOf('Test de preparación')===0);}
+/* Opciones que remiten a otras por su letra o por su posición («a y b son
+   correctas», «todas las anteriores»): si se barajan pierden el sentido, así que
+   esas preguntas conservan siempre el orden original. */
+const RE_POS=/(^|[\s(])[a-d]\)?\s*,?\s*(y|e)\s*(la\s+)?[b-d]\)?(\s|$)|anteriores|\b[a-d]\)\s*,\s*[b-d]\)|^\s*(ambas|todas|las tres|las dos|ninguna)\b/i;
+function ordenFijo(p){return (p.es.o||[]).some(o=>RE_POS.test(o));}
 
 function pool(f){
   f=f||{};
@@ -244,7 +272,7 @@ function iniciar(cfg){
     orden:cfg.lista.map(p=>{
       const n=(txt(p).o||[]).length;
       let idx=Array.from({length:n},(_,k)=>k);
-      if(S.cfg.barajar&&!cfg.srs) idx=mezclar(idx);
+      if(S.cfg.barajar&&!cfg.srs&&!ordenFijo(p)) idx=mezclar(idx);
       return idx;
     }),
     modo:cfg.modo, titulo:cfg.titulo||'', oficial:cfg.oficial||null, srs:!!cfg.srs,

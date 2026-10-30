@@ -6,8 +6,8 @@
    cache:'reload' para saltarse también la caché HTTP del navegador, y el
    index.html se sirve siempre desde la red cuando la hay, de modo que las
    referencias a la versión nueva lleguen aunque el resto esté cacheado. */
-const CACHE = 'auxcocina-v108';
-const FILES = ['./','./index.html','./fuentes/barlow-condensed-latin-600-normal.woff2','./fuentes/barlow-condensed-latin-700-normal.woff2','./fuentes/source-sans-3-latin-400-normal.woff2','./fuentes/source-sans-3-latin-600-normal.woff2','./fuentes/source-sans-3-latin-700-normal.woff2','./app.js?v=108','./convocatoria.js?v=108','./preguntas.js?v=108','./temario.js?v=108','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png'];
+const CACHE = 'auxcocina-v109';
+const FILES = ['./','./index.html','./fuentes/barlow-condensed-latin-600-normal.woff2','./fuentes/barlow-condensed-latin-700-normal.woff2','./fuentes/source-sans-3-latin-400-normal.woff2','./fuentes/source-sans-3-latin-600-normal.woff2','./fuentes/source-sans-3-latin-700-normal.woff2','./app.js?v=109','./convocatoria.js?v=109','./preguntas.js?v=109','./temario.js?v=109','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
