@@ -1222,13 +1222,14 @@ function planDatos(){
   return {ex,ini,dias,finLect,total,tramos,fase,deHoy,atrasados,restan:difDias(hoy,ex)};
 }
 /* Fichas de hoy: las que tocan repasar más un máximo de 10 nuevas al día. */
-function fichasCola(){
-  const hoy=HOY();
-  const due=FICH.filter(f=>{const e=S.fi[f.id];return e&&e.v>0&&e.due<=hoy;});
+function fichasCola(tema){
+  const hoy=HOY(), L=tema?FICH.filter(f=>f.tema===tema):FICH;
+  const due=L.filter(f=>{const e=S.fi[f.id];return e&&e.v>0&&e.due<=hoy;});
+  /* El límite diario de fichas nuevas cuenta las vistas hoy por primera vez, sean del tema que sean */
   const vistasHoy=FICH.filter(f=>S.fi[f.id]&&S.fi[f.id].s===hoy).length;
-  const sin=FICH.filter(f=>!(S.fi[f.id]&&S.fi[f.id].v));
+  const sin=L.filter(f=>!(S.fi[f.id]&&S.fi[f.id].v));
   const hechasHoy=FICH.filter(f=>S.fi[f.id]&&S.fi[f.id].u===hoy).length;
-  return {due,nuevas:mezclar(sin).slice(0,Math.max(0,10-vistasHoy)),hechasHoy,sin:sin.length};
+  return {due,nuevas:mezclar(sin).slice(0,Math.max(0,(S.cfg.fnue||10)-vistasHoy)),hechasHoy,sin:sin.length};
 }
 function tareasHoy(){
   const P=planDatos(), hoy=HOY(), h=S.hist[hoy]||{n:0,o:0,nv:0};
@@ -1402,23 +1403,41 @@ function resumenFlacos(){
    ========================================================= */
 const FICH=(window.FICHAS||[]);
 let FS=null; // sesión de fichas en curso
-function pintarFichas(){
-  if(FS){pintarFicha();return;}
-  const fc=fichasCola(), n=fc.due.length+fc.nuevas.length;
-  let h=`<div class="card"><h2>${tx('Fichas de cifras','Fichas de cifras')}</h2>
-    <p>${tx('Una cifra por ficha: plazos, temperaturas, porcentajes y números de artículo que se confunden. Respondes de cabeza, miras la solución y dices cómo te ha ido.','Unha cifra por ficha: prazos, temperaturas, porcentaxes e números de artigo que se confunden. Respondes de cabeza, miras a solución e dis como che foi.')}</p>
-    <p class="mini">${FICH.length} ${tx('fichas','fichas')} · ${fc.due.length} ${tx('para repasar hoy','para repasar hoxe')} · ${fc.sin} ${tx('sin ver','sen ver')}</p></div>`;
-  h+=n?`<button class="btn" id="fGo">${tx('Empezar','Comezar')} · ${n}<small>${fc.due.length} ${tx('de repaso','de repaso')} + ${fc.nuevas.length} ${tx('nuevas','novas')}</small></button>`
-      :`<div class="vacio">${tx('Hoy no queda ninguna ficha. Vuelve mañana.','Hoxe non queda ningunha ficha. Volve mañá.')}</div>`;
+let fTema=''; // tema elegido en la vista de fichas ('' = todos)
+function listaFichas(q){
+  const nq=normTxt(q||'');
   const temas=Object.keys(TEMAS).filter(k=>FICH.some(f=>f.tema===k));
-  h+=`<div class="card"><h3>${tx('Todas las fichas','Todas as fichas')}</h3>`;
+  let h='',total=0;
   temas.forEach(k=>{
-    h+=`<details class="fl-t"><summary>${k} · ${esc(nom(k))} <em>${FICH.filter(f=>f.tema===k).length}</em></summary>`;
-    FICH.filter(f=>f.tema===k).forEach(f=>{h+=`<div class="fl-f"><b>${esc(f.q)}</b><span>${esc(f.a)}</span></div>`;});
+    const L=FICH.filter(f=>f.tema===k&&(!nq||normTxt(f.q+' '+f.a).includes(nq)));
+    if(!L.length)return;
+    total+=L.length;
+    h+=`<details class="fl-t" ${nq?'open':''}><summary>${k} · ${esc(nom(k))} <em>${L.length}</em></summary>`;
+    L.forEach(f=>{h+=`<div class="fl-f"><b>${esc(f.q)}</b><span>${esc(f.a)}</span></div>`;});
     h+=`</details>`;
   });
-  h+=`</div>`;
+  return total?h:`<div class="vacio">${tx('Ninguna ficha coincide','Ningunha ficha coincide')}</div>`;
+}
+function pintarFichas(){
+  if(FS){pintarFicha();return;}
+  const fc=fichasCola(fTema), n=fc.due.length+fc.nuevas.length, todas=fichasCola();
+  const temas=Object.keys(TEMAS).filter(k=>FICH.some(f=>f.tema===k));
+  let h=`<div class="card"><h2>${tx('Fichas de cifras','Fichas de cifras')}</h2>
+    <p>${tx('Una cifra por ficha: plazos, temperaturas, porcentajes y números de artículo que se confunden. Respondes de cabeza, miras la solución y dices cómo te ha ido.','Unha cifra por ficha: prazos, temperaturas, porcentaxes e números de artigo que se confunden. Respondes de cabeza, miras a solución e dis como che foi.')}</p>
+    <p class="mini">${FICH.length} ${tx('fichas','fichas')} · ${todas.due.length} ${tx('para repasar hoy','para repasar hoxe')} · ${todas.sin} ${tx('sin ver','sen ver')}</p>
+    <label class="row"><span>${tx('Tema','Tema')}</span>
+      <select id="fSel"><option value="">${tx('Todos los temas','Todos os temas')}</option>${temas.map(k=>`<option value="${k}" ${k===fTema?'selected':''}>${k} · ${esc(nom(k).slice(0,38))}</option>`).join('')}</select></label>
+    <label class="row"><span>${tx('Fichas nuevas al día','Fichas novas ao día')}<small>${tx('Más fichas nuevas, más repasos los días siguientes','Máis fichas novas, máis repasos os días seguintes')}</small></span>
+      <select id="fNue">${[5,10,15,20,30,50].map(v=>`<option ${v===(S.cfg.fnue||10)?'selected':''}>${v}</option>`).join('')}</select></label></div>`;
+  h+=n?`<button class="btn" id="fGo">${tx('Empezar','Comezar')} · ${Math.min(n,30)}<small>${fc.due.length} ${tx('de repaso','de repaso')} + ${fc.nuevas.length} ${tx('nuevas','novas')}${n>30?' · '+tx('en tandas de 30','en tandas de 30'):''}</small></button>`
+      :`<div class="vacio">${fTema?tx('No queda ninguna ficha de este tema hoy.','Non queda ningunha ficha deste tema hoxe.'):tx('Hoy no queda ninguna ficha. Vuelve mañana.','Hoxe non queda ningunha ficha. Volve mañá.')}</div>`;
+  h+=`<div class="card"><h3>${tx('Todas las fichas','Todas as fichas')}</h3>
+    <input class="buscar" id="fBus" type="search" placeholder="${tx('Buscar una cifra o un dato…','Buscar unha cifra ou un dato…')}" autocomplete="off">
+    <div id="fLista">${listaFichas('')}</div></div>`;
   $('#v-fichas').innerHTML=h;
+  $('#fSel').onchange=e=>{fTema=e.target.value;pintarFichas();};
+  $('#fNue').onchange=e=>{S.cfg.fnue=+e.target.value;guardar();pintarFichas();};
+  $('#fBus').oninput=e=>{$('#fLista').innerHTML=listaFichas(e.target.value.trim());};
   const g=$('#fGo');
   if(g)g.onclick=()=>{
     const cola=mezclar(fc.due).concat(fc.nuevas).slice(0,30);
