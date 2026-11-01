@@ -6,8 +6,8 @@
    cache:'reload' para saltarse también la caché HTTP del navegador, y el
    index.html se sirve siempre desde la red cuando la hay, de modo que las
    referencias a la versión nueva lleguen aunque el resto esté cacheado. */
-const CACHE = 'auxcocina-v110';
-const FILES = ['./','./index.html','./fuentes/barlow-condensed-latin-600-normal.woff2','./fuentes/barlow-condensed-latin-700-normal.woff2','./fuentes/source-sans-3-latin-400-normal.woff2','./fuentes/source-sans-3-latin-600-normal.woff2','./fuentes/source-sans-3-latin-700-normal.woff2','./app.js?v=110','./convocatoria.js?v=110','./preguntas.js?v=110','./temario.js?v=110','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png'];
+const CACHE = 'auxcocina-v111';
+const FILES = ['./','./index.html','./fuentes/barlow-condensed-latin-600-normal.woff2','./fuentes/barlow-condensed-latin-700-normal.woff2','./fuentes/source-sans-3-latin-400-normal.woff2','./fuentes/source-sans-3-latin-600-normal.woff2','./fuentes/source-sans-3-latin-700-normal.woff2','./app.js?v=111','./convocatoria.js?v=111','./preguntas.js?v=111','./fichas.js?v=111','./temario.js?v=111','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -32,6 +32,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
+  /* Las descargas (PDF, EPUB) las gestiona el navegador: si pasaran por aquí
+     como «navegación», se guardarían en la caché como si fueran el index.html. */
+  if (/\.(pdf|epub|docx)$/i.test(url.pathname)) return;
   const esDocumento = e.request.mode === 'navigate' ||
                       url.pathname.endsWith('/') ||
                       url.pathname.endsWith('index.html');

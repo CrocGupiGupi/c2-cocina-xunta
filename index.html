@@ -271,6 +271,82 @@ table.res tr:last-child td{border-bottom:0}
 @media(max-width:22rem){.conv-g{grid-template-columns:repeat(2,1fr)}}
 #arriba{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));width:48px;height:48px;border-radius:var(--r);background:var(--brand);color:#fff;border:0;font-size:1.1875rem;box-shadow:0 3px 12px rgba(0,0,0,.28);display:none;z-index:55}
 #arriba.on{display:block}
+/* ---------- plan de hoy, avisos y calendario ---------- */
+a.btn{text-decoration:none}
+/* Lista de tareas del día: casillas cuadradas, como un registro de cocina */
+.hoy{background:var(--card);border:1px solid var(--line);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+.hoy-t{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:12px 14px 8px}
+.hoy-t b{font:700 1.1875rem/1.2 var(--display)}
+.hoy-t span{color:var(--muted);font-size:.8125rem;text-align:right}
+.hoy-f{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);padding:10px 14px;min-height:3.5rem}
+.hoy-f .caja{flex:0 0 1.5rem;height:1.5rem;border:2px solid var(--muted);border-radius:4px;display:grid;place-items:center;font:700 1rem/1 var(--cuerpo);color:#fff}
+.hoy-f.ok .caja{background:var(--ok);border-color:var(--ok)}
+.hoy-f .tx{flex:1;min-width:0}
+.hoy-f .tx b{display:block;font:600 1.0625rem/1.2 var(--display)}
+.hoy-f .tx small{display:block;color:var(--muted);font-size:.8125rem;margin-top:2px}
+.hoy-f em{font:700 1.125rem/1 var(--display);font-style:normal;color:var(--muted);font-variant-numeric:tabular-nums}
+.hoy-f.ok .tx b{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.hoy-v{display:block;width:100%;text-align:right;background:transparent;border:0;border-top:1px solid var(--line);padding:10px 14px;color:var(--brand2);font-weight:600;font-size:.875rem;min-height:2.75rem}
+.aviso{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--warn);border-radius:var(--r);padding:12px 14px;margin-bottom:12px}
+.aviso b{display:block;font:700 1.0625rem/1.2 var(--display)}
+.aviso span{display:block;color:var(--muted);font-size:.8125rem;margin-top:2px;max-width:46ch}
+.plan-b{display:grid;grid-template-columns:7.5rem 1fr 3rem;gap:9px;align-items:center;margin:8px 0;font-size:.8125rem}
+.plan-b .bg{height:9px;background:var(--line);border-radius:2px;overflow:hidden;display:block}
+.plan-b .bg b{display:block;height:100%;background:var(--brand2)}
+.plan-b em{font-style:normal;text-align:right;color:var(--muted)}
+.card p.veredicto-p{font-weight:600}
+.card p.veredicto-p.ok{color:var(--ok)}
+.card p.veredicto-p.no{color:var(--ko)}
+.cal-t{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.cal-t h2{margin:0;text-transform:capitalize}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.cal-d{text-align:center;font-size:.75rem;color:var(--muted);padding:2px 0;font-weight:600}
+.cal-v{min-height:2.75rem}
+.cal-c{min-height:2.75rem;min-width:0;background:var(--bg);border:2px solid transparent;border-radius:4px;padding:3px 1px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center}
+.cal-c b{font:700 .9375rem/1 var(--display);font-variant-numeric:tabular-nums}
+.cal-c i{font:600 .625rem/1 var(--cuerpo);font-style:normal;color:var(--muted);min-height:.625rem;white-space:nowrap}
+.cal-c.l1{background:color-mix(in srgb,var(--brand2) 16%,var(--bg))}
+.cal-c.l2{background:color-mix(in srgb,var(--brand2) 34%,var(--bg))}
+.cal-c.l3{background:color-mix(in srgb,var(--brand2) 55%,var(--bg))}
+.cal-c.cal-hoy{border-color:var(--txt)}
+.cal-c.leido i::after{content:'\2713'}
+.cal-c.ex{background:var(--accent);color:var(--accent-txt)}
+.cal-c.ex i{color:var(--accent-txt)}
+/* Fichas de cifras */
+.ficha{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--brand);border-radius:var(--r);padding:18px 16px;margin:14px 0 12px}
+.fcod{display:block;font-size:.8125rem;color:var(--muted);margin-bottom:8px}
+.fq{font:600 1.625rem/1.2 var(--display);max-width:32ch}
+.fa{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:1.125rem;line-height:1.45;max-width:60ch}
+.fcal{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.fcal .btn.sm{width:100%;display:block;text-align:center;padding:8px 4px}
+.fcal .btn small{opacity:.7;font-size:.75rem;margin-top:0}
+.fl-t{border-top:1px solid var(--line)}
+.fl-t summary{cursor:pointer;padding:10px 0;font-weight:600;font-size:.9rem;min-height:2.75rem;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.fl-t summary em{font-style:normal;color:var(--muted);font-weight:400}
+.fl-f{padding:8px 0 10px;border-top:1px dashed var(--line);font-size:.875rem}
+.fl-f b{display:block}
+.fl-f span{color:var(--muted)}
+/* Notas, novedades, copia de seguridad */
+.pm-b{float:right;display:inline-flex;gap:6px}
+.chip.tiene{border-color:var(--brand2);color:var(--brand2);font-weight:700}
+.badge.nov{background:var(--brand);color:#fff}
+.nota-p{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin:0 0 12px}
+.nota-p label{display:block;font-size:.8125rem;color:var(--muted);margin-bottom:6px}
+.nota-p textarea{width:100%;background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:var(--r);padding:9px 10px;font:inherit;font-size:.9375rem;resize:vertical;margin-bottom:8px}
+.nota-v{border-left:3px solid var(--brand2);background:color-mix(in srgb,var(--brand2) 6%,var(--card));padding:8px 12px;margin:0 0 12px;font-size:.875rem;border-radius:0 var(--r) var(--r) 0;white-space:pre-wrap}
+.nov-f{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);padding:8px 2px;font-size:.875rem;min-height:2.75rem}
+.nov-f em{font:700 1.0625rem/1 var(--display);font-style:normal;color:var(--muted)}
+.dn{border-top:1px solid var(--line);padding:8px 0}
+.dn-q{display:block;width:100%;text-align:left;background:none;border:0;padding:4px 0;font-size:.8438rem}
+.dn .nota-v{margin:6px 0 8px}
+.nota-v{overflow-wrap:anywhere}
+.cal-t .chip.mini,.aviso .chip.mini,.nota-p .chip.mini,.copia-p .chip.mini,.pm-b .chip.mini,.dn .chip.mini{min-height:2.75rem;min-width:2.75rem}
+.copia-p{border:1px solid var(--line);border-left:6px solid var(--brand2);border-radius:var(--r);padding:12px;margin:0 0 10px;background:var(--bg)}
+.copia-p b{display:block;font:700 1.0625rem/1.2 var(--display)}
+.copia-p span{display:block;color:var(--muted);font-size:.8125rem;margin:3px 0 8px}
+.copia-p small{display:block;color:var(--muted);font-size:.75rem;margin-top:8px}
+@media(max-width:340px){.plan-b{grid-template-columns:5.5rem 1fr 2.5rem}.fq{font-size:1.375rem}}
+
 /* ============================================================
    ADAPTATIVO
    Puntos de ruptura: 340 (teléfono muy estrecho) · 600 (tableta
@@ -290,6 +366,7 @@ main>.view{margin-inline:auto}
   .btn.sec:hover,.btn.ghost:hover{background:color-mix(in srgb,var(--brand2) 8%,var(--card))}
   .opt:not(:disabled):hover{border-color:var(--brand2);border-left-color:var(--brand2)}
   .etiq:hover{background:color-mix(in srgb,var(--accent) 12%,var(--card))}
+  .hoy-f:hover,.hoy-v:hover,.nov-f:hover,.dn-q:hover{background:color-mix(in srgb,var(--brand2) 8%,var(--card))}
   .chip.on:hover{background:var(--brand)}
   .nav button:hover{color:var(--txt)}
 }
@@ -343,7 +420,7 @@ main>.view{margin-inline:auto}
   .nav button.on{border-left-color:var(--accent);background:color-mix(in srgb,var(--brand2) 10%,transparent)}
   main{max-width:none;margin:0 0 0 var(--rail);padding:1.75rem var(--pad) 4rem}
   main>.view{max-width:62rem}
-  main>#v-play,main>#v-fin,main>#v-ajustes,main>#v-simulacro,main>#v-repaso{max-width:48rem}
+  main>#v-play,main>#v-fin,main>#v-ajustes,main>#v-simulacro,main>#v-repaso,main>#v-fichas{max-width:48rem}
   #barra,.lbar{margin-inline:0;padding-inline:0;margin-top:calc(-1.75rem);padding-top:.75rem}
   #arriba{bottom:1.5rem;right:1.5rem}
   .toast{bottom:1.5rem}
@@ -357,7 +434,12 @@ main>.view{margin-inline:auto}
 .solo-ancho{display:none}
 /* Pantallas anchas (>=1200 px): paneles en dos columnas */
 @media(min-width:1200px){
-  main>#v-inicio,main>#v-test,main>#v-stats,main>#v-temario{max-width:80rem}
+  main>#v-inicio,main>#v-test,main>#v-stats,main>#v-temario,main>#v-plan{max-width:80rem}
+
+  /* Plan: tareas y progreso a la izquierda, calendario a la derecha */
+  #v-plan.on{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 1.75rem;align-items:start}
+  #v-plan>*{grid-column:1}
+  #v-plan>.calcard{grid-column:2;grid-row:1 / span 3}
 
   /* Inicio: lectura del día y accesos a la izquierda, historial a la derecha */
   #v-inicio.on{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:0 1.75rem;align-items:start}
@@ -388,7 +470,7 @@ main>.view{margin-inline:auto}
 
 /* Pantallas muy anchas: la barra lateral y el contenido ganan aire */
 @media(min-width:1800px){
-  main>#v-inicio,main>#v-test,main>#v-stats,main>#v-temario{max-width:88rem}
+  main>#v-inicio,main>#v-test,main>#v-stats,main>#v-temario,main>#v-plan{max-width:88rem}
 }
 
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
@@ -414,6 +496,8 @@ main>.view{margin-inline:auto}
   <section id="v-lectura" class="view"></section>
   <section id="v-play" class="view"></section>
   <section id="v-fin" class="view"></section>
+  <section id="v-plan" class="view"></section>
+  <section id="v-fichas" class="view"></section>
 </main>
 
 <nav class="nav" id="nav">
@@ -426,9 +510,10 @@ main>.view{margin-inline:auto}
 </nav>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="convocatoria.js?v=110"></script>
-<script src="preguntas.js?v=110"></script>
-<script src="temario.js?v=110"></script>
-<script src="app.js?v=110"></script>
+<script src="convocatoria.js?v=111"></script>
+<script src="preguntas.js?v=111"></script>
+<script src="fichas.js?v=111"></script>
+<script src="temario.js?v=111"></script>
+<script src="app.js?v=111"></script>
 </body>
 </html>

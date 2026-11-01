@@ -145,7 +145,10 @@ const T = {
 
 /* ---------- estado persistente ---------- */
 const LS='auxcocina_v1';
-const HOY=()=>new Date().toISOString().slice(0,10);
+/* Fecha local (no UTC): pasada la medianoche en España, toISOString() seguiría
+   dando el día anterior y la racha y el plan contarían mal. */
+const FECHA=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const HOY=()=>FECHA(new Date());
 const D={
   cfg:{lang:'es',theme:'auto',penal:true,barajar:true,fs:16,soloVerif:false},
   q:{},          // id -> {v:vistas, o:ok, k:ko, ef:facilidad, iv:intervalo, due:'YYYY-MM-DD', l:lapsos}
@@ -154,26 +157,34 @@ const D={
   racha:{d:'',n:0},
   ses:[],        // últimas sesiones
   lec:null,      // última lectura del temario {tema, y}
-  migr:[]        // marcas de window.MIGRA_IDS ya aplicadas
+  migr:[],       // marcas de window.MIGRA_IDS ya aplicadas
+  bk:{f:'',s:''},// copia de seguridad: fecha de la última y «recordar más tarde» hasta
+  plan:{ini:'',ex:'2027-04-30',dias:6}, // plan de estudio: inicio, fecha de examen, días/semana
+  leidos:{},     // tema -> fecha en que se marcó como leído
+  fi:{},         // fichas de cifras: id -> {v,o,ef,iv,due,l}
+  notas:{},      // id de pregunta -> {t:texto, f:fecha}
+  simh:[]        // simulacros oficiales: {f,tit,pts,max,ap}
 };
 let S=JSON.parse(JSON.stringify(D));
 /* Cuando una revisión del banco mueve una pregunta a otro tema, su id cambia.
    window.MIGRA_IDS (en preguntas.js) trae el mapa viejo → nuevo; se aplica una
    sola vez por marca para no perder el progreso ni las marcadas. */
-function migrarIds(nuevo){
+function migrarIds(nuevo,X){
+  X=X||S; // también se aplica a una copia de seguridad antes de fusionarla
   const L=window.MIGRA_IDS||[];
-  if(!Array.isArray(S.migr))S.migr=[];
+  if(!Array.isArray(X.migr))X.migr=[];
   let cambio=false;
   L.forEach(m=>{
-    if(S.migr.includes(m.marca))return;
+    if(X.migr.includes(m.marca))return;
     if(!nuevo){
       // los ids nuevos nunca coinciden con uno antiguo (se numeran tras el mayor del banco previo)
       const q={};
-      Object.keys(S.q).forEach(id=>{q[m.mapa[id]||id]=S.q[id];});
-      S.q=q;
-      S.marc=S.marc.map(id=>m.mapa[id]||id).filter((id,i,a)=>a.indexOf(id)===i);
+      Object.keys(X.q).forEach(id=>{q[m.mapa[id]||id]=X.q[id];});
+      X.q=q;
+      X.marc=X.marc.map(id=>m.mapa[id]||id).filter((id,i,a)=>a.indexOf(id)===i);
+      if(X.notas){const n={};Object.keys(X.notas).forEach(id=>{n[m.mapa[id]||id]=X.notas[id];});X.notas=n;}
     }
-    S.migr.push(m.marca);cambio=true;
+    X.migr.push(m.marca);cambio=true;
   });
   return cambio;
 }
@@ -192,7 +203,8 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 function mezclar(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
 function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),2200);}
 function hhmmss(s){s=Math.max(0,s|0);const h=s/3600|0,m=(s%3600)/60|0,g=s%60;return (h?h+':':'')+String(m).padStart(2,'0')+':'+String(g).padStart(2,'0');}
-function sumar(d){const f=new Date();f.setDate(f.getDate()+d);return f.toISOString().slice(0,10);}
+function sumar(d){const f=new Date();f.setDate(f.getDate()+d);return FECHA(f);}
+const tx=(es,gl)=>S.cfg.lang==='gl'?gl:es;
 const BANCO=(window.BANCO||[]);
 function txt(p){return p[S.cfg.lang]||p.es||p.gl;}
 
@@ -235,7 +247,10 @@ function elegir(cand,n,priorizar){
 
 /* ---------- repetición espaciada (SM-2 simplificado) ---------- */
 function planificar(id,calidad){ // calidad 0=otra vez 1=difícil 2=bien 3=fácil
-  const e=S.q[id]||(S.q[id]={v:0,o:0,k:0,ef:2.5,iv:0,due:HOY(),l:0});
+  planificarEn(S.q[id]||(S.q[id]={v:0,o:0,k:0,ef:2.5,iv:0,due:HOY(),l:0}),calidad);
+}
+/* La misma lógica sirve para las preguntas (S.q) y para las fichas (S.fi). */
+function planificarEn(e,calidad){
   if(e.ef===undefined)e.ef=2.5;
   if(calidad===0){e.iv=0;e.l=(e.l||0)+1;e.ef=Math.max(1.3,e.ef-0.2);e.due=HOY();return;}
   const q=[0,3,4,5][calidad];
@@ -250,9 +265,15 @@ const falladas=()=>BANCO.filter(p=>{const e=S.q[p.id];return e&&e.k>0&&(e.o/(e.v
 /* ---------- registro de resultados ---------- */
 function registrar(id,ok,tema){
   const e=S.q[id]||(S.q[id]={v:0,o:0,k:0,ef:2.5,iv:0,due:HOY(),l:0});
+  const nueva=!e.v;
   e.v++; ok?e.o++:e.k++;
   const h=S.hist[HOY()]||(S.hist[HOY()]={n:0,o:0});
   h.n++; if(ok)h.o++;
+  if(nueva)h.nv=(h.nv||0)+1; // preguntas vistas por primera vez hoy (alimenta el plan)
+  tocarRacha();
+}
+/* Cuenta el día como estudiado (racha). Lo usan las preguntas y las fichas. */
+function tocarRacha(){
   if(S.racha.d!==HOY()){
     S.racha.n=(S.racha.d===sumar(-1))?S.racha.n+1:1;
     S.racha.d=HOY();
@@ -301,8 +322,19 @@ function pintarPlay(){
     <div class="prog"><i style="width:${(J.i)/total*100}%"></i></div>
   </div>`;
 
-  h+=`<div class="pmeta">${esc(nom(p.tema))} · ${p.tema}${p.tipo==='practica'?' · <span class="badge">'+(S.cfg.lang==='gl'?'PRÁCTICA':'PRÁCTICA')+'</span>':''}
-      <button class="chip mini" id="bMarcar" style="float:right;${marcada?'background:var(--accent);color:#2a2000;border-color:var(--accent);font-weight:700':''}">${marcada?'★ '+t('marcada'):'☆ '+t('marcar')}</button></div>`;
+  const nv=novDe(p), nota=S.notas[p.id];
+  h+=`<div class="pmeta">${esc(nom(p.tema))} · ${p.tema}${p.tipo==='practica'?' · <span class="badge">'+(S.cfg.lang==='gl'?'PRÁCTICA':'PRÁCTICA')+'</span>':''}${nv.length?' <span class="badge nov">'+tx('Novedad 2026','Novidade 2026')+'</span>':''}
+      <span class="pm-b"><button class="chip mini ${nota?'tiene':''}" id="bNota" aria-expanded="${J.notaAb===p.id}">✎ ${tx('Duda o nota','Dúbida ou nota')}</button>
+      <button class="chip mini" id="bMarcar" style="${marcada?'background:var(--accent);color:#2a2000;border-color:var(--accent);font-weight:700':''}">${marcada?'★ '+t('marcada'):'☆ '+t('marcar')}</button></span></div>`;
+  if(J.notaAb===p.id){
+    h+=`<div class="nota-p"><label for="tNota">${tx('Lo que no entiendes o quieres recordar de esta pregunta','O que non entendes ou queres lembrar desta pregunta')}</label>
+      <textarea id="tNota" rows="3" maxlength="600">${esc(nota?nota.t:'')}</textarea>
+      <div class="fila"><button class="btn sm" id="nGuardar">${tx('Guardar nota','Gardar nota')}</button>
+      ${nota?`<button class="chip mini" id="nBorrar">${tx('Borrar','Borrar')}</button>`:''}
+      ${TEM[p.tema]?`<button class="chip mini" id="nTema">📖 ${tx('Ver en el tema','Ver no tema')}</button>`:''}</div></div>`;
+  }else if(nota){
+    h+=`<div class="nota-v">✎ ${esc(nota.t)}</div>`;
+  }
   h+=`<div class="preg">${esc(c.q)}</div>`;
 
   ord.forEach((oi,k)=>{
@@ -321,7 +353,8 @@ function pintarPlay(){
     if(p.ref)h+=`<span class="ref">${t('refFuente')}: ${esc(p.ref)}</span>`;
     if(p.inc)h+=`<span class="ref" style="color:var(--ko)">${S.cfg.lang==='gl'?'⚠ O texto desta pregunta quedou incompleto no PDF de orixe e non se puido recuperar':'⚠ El texto de esta pregunta quedó incompleto en el PDF de origen y no se pudo recuperar'}</span>`;
     if(esImportada(p))h+=`<span class="ref" style="color:var(--warn)">${S.cfg.lang==='gl'?'⚠ Pregunta sen verificar contra fonte oficial e con tema asignado automaticamente':'⚠ Pregunta sin verificar contra fuente oficial y con el tema asignado automáticamente'}</span>`;
-    if(TEM[p.tema])h+=`<button class="chip mini" id="bVerTema" style="margin-top:9px">📖 ${t('verTema')} ${p.tema}</button>`;
+    if(nv.length)h+=`<span class="ref" style="color:var(--warn)">${tx('Novedad normativa posterior al corte de la convocatoria anterior','Novidade normativa posterior ao corte da convocatoria anterior')}: ${esc(nv.map(k=>NOV.find(n=>n.k===k)[S.cfg.lang]).join(' · '))}</span>`;
+    if(TEM[p.tema])h+=`<button class="chip mini" id="bVerTema" style="margin-top:9px">📖 ${tx('Ver en el tema','Ver no tema')} ${p.tema}</button>`;
     h+=`</div>`;
     if(J.srs){
       h+=`<div class="fila" style="margin-top:10px">
@@ -354,7 +387,14 @@ function pintarPlay(){
   $('#v-play').querySelectorAll('[data-sr]').forEach(b=>b.onclick=()=>{
     planificar(p.id,+b.dataset.sr); guardar(); avanzar();
   });
-  const bv=$('#bVerTema'); if(bv)bv.onclick=()=>{J._vuelta=true;abrirTema(p.tema);};
+  const bv=$('#bVerTema'); if(bv)bv.onclick=()=>{J._vuelta=true;verEnTema(p);};
+  $('#bNota').onclick=()=>{J.notaAb=(J.notaAb===p.id)?null:p.id;pintarPlay();};
+  const ng=$('#nGuardar'); if(ng)ng.onclick=()=>{
+    const v=$('#tNota').value.trim();
+    if(v)S.notas[p.id]={t:v,f:HOY()}; else delete S.notas[p.id];
+    J.notaAb=null;guardar();pintarPlay();toast(tx('Nota guardada','Nota gardada'));};
+  const nb=$('#nBorrar'); if(nb)nb.onclick=()=>{delete S.notas[p.id];J.notaAb=null;guardar();pintarPlay();};
+  const nt=$('#nTema'); if(nt)nt.onclick=()=>{J._vuelta=true;verEnTema(p);};
   const bp=$('#bPrev'); if(bp)bp.onclick=()=>{J.i--;pintarPlay();window.scrollTo(0,0);};
   $('#bNext').onclick=avanzar;
   $('#bMarcar').onclick=()=>{
@@ -380,17 +420,48 @@ function finalizar(){
     if(J.modo==='examen'){registrar(p.id,acierto,p.tema);planificar(p.id,acierto?2:0);}
   });
   const seg=Math.round((Date.now()-J.t0)/1000);
+  if(J.oficial){ // en los simulacros la penalización es siempre la del examen real
+    const n=J.lista.length, neto=ok-ko/4;
+    S.simh.unshift({f:HOY(),tit:J.titulo,pts:+(Math.max(0,neto)/n*J.oficial.max).toFixed(2),max:J.oficial.max,ap:neto/n*100>=J.oficial.min});
+    S.simh=S.simh.slice(0,30);
+  }
   S.ses.unshift({f:HOY(),n:J.lista.length,ok,ko,bl,seg,tit:J.titulo});
   S.ses=S.ses.slice(0,40);
   guardar();
   pintarFin(ok,ko,bl,seg);
   ir('fin');
 }
+/* Dónde se han ido los puntos en un simulacro oficial: por tema y por tipo de
+   error. Un fallo cuesta la pregunta (1) más la penalización (¼); una en
+   blanco solo la pregunta. */
+function bloquePerdidas(of,n){
+  const u=of.max/n, porT={}, porP={general:{n:0,o:0},especifica:{n:0,o:0}};
+  J.lista.forEach((p,i)=>{
+    const r=J.resp[i], a=porT[p.tema]||(porT[p.tema]={n:0,o:0,k:0,b:0});
+    a.n++; if(r===null)a.b++; else if(r===p.r)a.o++; else a.k++;
+    const pp=porP[(TEMAS[p.tema]||{}).p];
+    if(pp){pp.n++;if(r===p.r)pp.o++;}
+  });
+  const filas=Object.keys(porT).map(k=>{const a=porT[k];return {k,n:a.n,o:a.o,perd:(a.k*1.25+a.b)*u};}).sort((x,y)=>y.perd-x.perd);
+  const kos=Object.keys(porT).reduce((s,k)=>s+porT[k].k,0), pen=kos*0.25*u;
+  let h=`<div class="card"><h2>${tx('Dónde has perdido los puntos','Onde perdeches os puntos')}</h2><table class="res">`;
+  [['general',t('parteG')],['especifica',t('parteE')]].forEach(([k,l])=>{
+    const a=porP[k];if(a.n)h+=`<tr><td>${l}</td><td>${a.o}/${a.n}</td></tr>`;});
+  h+=`</table><div class="sep"></div>`;
+  filas.slice(0,10).forEach(f=>{
+    const pc=f.o/f.n*100;
+    h+=`<div class="tbar"><span title="${esc(nom(f.k))}">${f.k}</span>
+      <span class="bg"><i style="width:${pc}%;background:${pc>=70?'var(--ok)':pc>=50?'var(--warn)':'var(--ko)'}"></i></span>
+      <em>−${f.perd.toFixed(2).replace('.',',')}</em></div>`;});
+  h+=`<p class="mini">${tx('Barra = aciertos del tema · cifra = puntos que te ha costado.','Barra = acertos do tema · cifra = puntos que che custou.')}</p>`;
+  if(kos)h+=`<p>${tx('Los '+kos+' fallos te han restado '+pen.toFixed(2).replace('.',',')+' puntos solo por la penalización. Dejadas en blanco, habrías sumado esos puntos.','Os '+kos+' fallos restáronche '+pen.toFixed(2).replace('.',',')+' puntos só pola penalización. Deixadas en branco, tería sumado eses puntos.')}</p>`;
+  return h+`</div>`;
+}
 function pintarFin(ok,ko,bl,seg){
   const n=J.lista.length;
-  const neto=S.cfg.penal?ok-ko/4:ok;
+  const of=J.oficial, penal=of?true:S.cfg.penal;
+  const neto=penal?ok-ko/4:ok;
   const pct=n?Math.max(0,neto)/n*100:0;
-  const of=J.oficial;
   let h=`<div class="card nota">
     <div class="big ${of&&pct<of.min?'fail':''}">${pct.toFixed(1)}%</div>
     <div class="sub">${J.titulo||''}</div>`;
@@ -404,7 +475,7 @@ function pintarFin(ok,ko,bl,seg){
     <tr><td>${t('aciertos')}</td><td style="color:var(--ok)">${ok}</td></tr>
     <tr><td>${t('fallos')}</td><td style="color:var(--ko)">${ko}</td></tr>
     <tr><td>${t('blanco')}</td><td>${bl}</td></tr>
-    <tr><td>${t('neto')} ${S.cfg.penal?'(−¼)':''}</td><td>${neto.toFixed(2)} / ${n}</td></tr>
+    <tr><td>${t('neto')} ${penal?'(−¼)':''}</td><td>${neto.toFixed(2)} / ${n}</td></tr>
     <tr><td>${t('tiempo')}</td><td>${hhmmss(seg)}</td></tr>
   </table></div>`;
 
@@ -412,7 +483,8 @@ function pintarFin(ok,ko,bl,seg){
   const porT={};
   J.lista.forEach((p,i)=>{const a=porT[p.tema]||(porT[p.tema]={n:0,o:0});a.n++;if(J.resp[i]===p.r)a.o++;});
   const claves=Object.keys(porT).sort();
-  if(claves.length>1){
+  if(of)h+=bloquePerdidas(of,n);
+  else if(claves.length>1){
     h+=`<div class="card"><h2>${t('porTemaTit')}</h2>`;
     claves.forEach(k=>{const a=porT[k],pc=a.o/a.n*100;
       h+=`<div class="tbar"><span title="${esc(nom(k))}">${k}</span>
@@ -439,8 +511,9 @@ function pintarFin(ok,ko,bl,seg){
 function ir(v){
   document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
   $('#v-'+v).classList.add('on');
-  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  const p={inicio:pintarInicio,test:pintarTest,simulacro:pintarSimulacro,repaso:pintarRepaso,stats:pintarStats,ajustes:pintarAjustes,temario:pintarTemario}[v];
+  const navv={plan:'inicio',fichas:'repaso'}[v]||v; // vistas que cuelgan de otra pestaña
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===navv));
+  const p={inicio:pintarInicio,test:pintarTest,simulacro:pintarSimulacro,repaso:pintarRepaso,stats:pintarStats,ajustes:pintarAjustes,temario:pintarTemario,plan:pintarPlan,fichas:pintarFichas}[v];
   if(p)p();
   window.scrollTo(0,0);
 }
@@ -456,13 +529,16 @@ function pintarInicio(){
     <div><b>${tv?Math.round(to/tv*100):0}%</b><span>${t('acierto')}</span></div>
     <div><b>${tv}</b><span>${t('hechas')}</span></div>
   </div>`;
+  h+=avisoCopia();
   if(pend)h+=`<button class="etiq" id="qPend"><b>${pend}</b><span>${t('pendientes')}</span><small>${t('repasoS')}</small></button>`;
-  else h+=`<button class="btn" id="qRapido">${t('nuevoTest')}<small>${t('nuevoTestS')}</small></button>`;
+  h+=bloqueHoy();
   h+=`<div class="lista">`;
-  if(pend)h+=`<button class="btn" id="qRapido">${t('nuevoTest')}<small>${t('nuevoTestS')}</small></button>`;
+  h+=`<button class="btn" id="qRapido">${t('nuevoTest')}<small>${t('nuevoTestS')}</small></button>`;
+  h+=`<button class="btn" id="qFlacos">${tx('Puntos flacos','Puntos febles')}<small>${esc(resumenFlacos())}</small></button>`;
   h+=`<button class="btn" id="qTemario">${t('temario')}<small>${S.lec&&TEM[S.lec.tema]?t('seguirLeyendo')+': '+S.lec.tema+' · '+esc(nom(S.lec.tema)):t('temarioS')}</small></button>`;
   h+=`<button class="btn" id="qTema">${t('porTema')}<small>${t('porTemaS')}</small></button>`;
   h+=`<button class="btn" id="qSimu">${t('simu')}<small>${t('simuS')}</small></button>`;
+  h+=`<button class="btn" id="qFichas">${tx('Fichas de cifras','Fichas de cifras')}<small>${tx('Plazos, temperaturas y porcentajes','Prazos, temperaturas e porcentaxes')}</small></button>`;
   if(fall)h+=`<button class="btn" id="qFall">${t('falladas')} · ${fall}<small>${gl?'As que máis se che resisten':'Las que más se te resisten'}</small></button>`;
   h+=`</div>`;
   if(S.ses.length){
@@ -481,7 +557,12 @@ function pintarInicio(){
   $('#qTemario').onclick=()=>{if(S.lec&&TEM[S.lec.tema])abrirTema(S.lec.tema,S.lec.y);else ir('temario');};
   $('#qTema').onclick=()=>ir('test');
   $('#qSimu').onclick=()=>ir('simulacro');
+  $('#qFlacos').onclick=()=>iniciar({lista:mezclar(puntosFlacos(25)),modo:'estudio',titulo:tx('Puntos flacos','Puntos febles')});
+  $('#qFichas').onclick=()=>ir('fichas');
   $('#qAjustes').onclick=()=>ir('ajustes');
+  ligarHoy();
+  const ac=$('#avCopia'); if(ac)ac.onclick=()=>guardarCopia().then(ok=>{if(ok)pintarInicio();});
+  const al=$('#avLuego'); if(al)al.onclick=()=>{S.bk.s=sumar(3);guardar();pintarInicio();};
   const a=$('#qPend'); if(a)a.onclick=()=>iniciar({lista:mezclar(pendientesHoy()).slice(0,30),modo:'estudio',srs:true,titulo:t('pendientes')});
   const b=$('#qFall'); if(b)b.onclick=()=>iniciar({lista:mezclar(falladas()).slice(0,25),modo:'estudio',titulo:t('falladas')});
 }
@@ -558,6 +639,12 @@ function pintarSimulacro(){
       <tr><td>${S.cfg.lang==='gl'?'Mínimo 1.º exercicio':'Mínimo 1.er ejercicio'}</td><td>40%</td></tr>
       <tr><td>${S.cfg.lang==='gl'?'Mínimo 2.º exercicio':'Mínimo 2.º ejercicio'}</td><td>50%</td></tr>
     </table></div>`;
+  if(S.simh.length){
+    h+=`<div class="card"><h3>${tx('Tus últimos simulacros','Os teus últimos simulacros')}</h3><table class="res">`;
+    S.simh.slice(0,6).forEach(x=>{h+=`<tr><td>${esc(x.tit)}<br><span class="mini">${x.f}</span></td>
+      <td style="color:${x.ap?'var(--ok)':'var(--ko)'}">${String(x.pts).replace('.',',')} / ${x.max}</td></tr>`;});
+    h+=`</table></div>`;
+  }
   $('#v-simulacro').innerHTML=h;
   $('#s1').onclick=()=>{
     const l=mezclar(elegir(pool({parte:'general'}),20,false).concat(elegir(pool({parte:'especifica'}),60,false)));
@@ -579,24 +666,56 @@ function pintarSimulacro(){
 
 function pintarRepaso(){
   const pend=pendientesHoy(), fall=falladas(), marc=BANCO.filter(p=>S.marc.includes(p.id));
+  const notas=BANCO.filter(p=>S.notas[p.id]);
+  const fc=fichasCola(), nF=fc.due.length+fc.nuevas.length;
   let h=`<div class="card"><h2>${t('repasoTit')}</h2><p>${t('repasoS')}</p></div>`;
   h+=`<button class="btn ${pend.length?'gold':'sec'}" id="r1">${t('pendientes')}<small>${pend.length} ${t('preg')}</small></button>`;
+  h+=`<button class="btn sec" id="rF">${tx('Puntos flacos','Puntos febles')}<small>${esc(resumenFlacos())}</small></button>`;
+  h+=`<button class="btn sec" id="rC">${tx('Fichas de cifras','Fichas de cifras')}<small>${nF} ${tx('para hoy','para hoxe')} · ${FICH.length} ${tx('en total','en total')}</small></button>`;
   h+=`<button class="btn sec" id="r2">${t('falladas')}<small>${fall.length} ${t('preg')}</small></button>`;
   h+=`<button class="btn sec" id="r3">${t('marcadas')}<small>${marc.length} ${t('preg')}</small></button>`;
   const sinver=BANCO.filter(p=>!S.q[p.id]||!S.q[p.id].v).length;
   h+=`<button class="btn sec" id="r4">${t('sinVer')}<small>${sinver} ${t('preg')}</small></button>`;
-  if(marc.length){
-    h+=`<div class="card"><h3>${t('marcadas')}</h3>`;
-    marc.slice(0,20).forEach(p=>{h+=`<div style="padding:8px 0;border-bottom:1px solid var(--line);font-size:.8438rem">
-      <span class="mini">${p.tema}</span><br>${esc(txt(p).q.slice(0,110))}${txt(p).q.length>110?'…':''}</div>`;});
+  /* Novedades normativas: lo que entra con el corte de esta convocatoria */
+  const novs=NOV.map(n=>({n,l:novLista(n.k)})).filter(x=>x.l.length);
+  const totNov=new Set(novs.flatMap(x=>x.l.map(p=>p.id))).size;
+  if(totNov){
+    h+=`<div class="card"><h2>${tx('Novedades normativas 2026','Novidades normativas 2026')}</h2>
+      <p>${tx('Normas publicadas después del corte de la convocatoria anterior. Si estudiaste con material viejo, son las que más se fallan.','Normas publicadas despois do corte da convocatoria anterior. Se estudaches con material vello, son as que máis se fallan.')}</p>
+      <button class="btn sm" id="rN" style="margin:6px 0 10px">${tx('Practicar todas','Practicar todas')} · ${totNov}</button>`;
+    novs.forEach(x=>{h+=`<button class="nov-f" data-nov="${x.n.k}"><span>${esc(x.n[S.cfg.lang])}</span><em>${x.l.length}</em></button>`;});
     h+=`</div>`;
   }
+  if(marc.length||notas.length){
+    const ids=new Set(notas.map(p=>p.id).concat(marc.map(p=>p.id)));
+    const lista=BANCO.filter(p=>ids.has(p.id));
+    h+=`<div class="card"><h3>${tx('Dudas y notas','Dúbidas e notas')}</h3>`;
+    lista.slice(0,30).forEach(p=>{
+      const n=S.notas[p.id];
+      h+=`<div class="dn"><button class="dn-q" data-dn="${p.id}"><span class="mini">${p.tema}${S.marc.includes(p.id)?' · ★':''}</span><br>${esc(txt(p).q.slice(0,120))}${txt(p).q.length>120?'…':''}</button>
+        ${n?`<div class="nota-v">✎ ${esc(n.t)}</div>`:''}
+        ${TEM[p.tema]?`<button class="chip mini" data-dt="${p.id}">📖 ${tx('Ver en el tema','Ver no tema')}</button>`:''}</div>`;});
+    h+=`</div>`;
+  }
+  h+=`<div class="card"><h3>${tx('Para leer sin pantalla','Para ler sen pantalla')}</h3>
+    <p>${tx('Esquemas y datos memorizables de los 22 temas, en un solo documento para imprimir o leer en el lector de libros.','Esquemas e datos memorizables dos 22 temas, nun só documento para imprimir ou ler no lector de libros.')}</p>
+    <div class="fila"><a class="btn sm sec" href="descargas/repaso-c2-cocina.pdf" download>PDF</a>
+    <a class="btn sm sec" href="descargas/repaso-c2-cocina.epub" download>EPUB</a></div></div>`;
   $('#v-repaso').innerHTML=h;
   $('#r1').onclick=()=>pend.length?iniciar({lista:mezclar(pend).slice(0,40),modo:'estudio',srs:true,titulo:t('pendientes')}):toast(t('sinPend'));
+  $('#rF').onclick=()=>iniciar({lista:mezclar(puntosFlacos(25)),modo:'estudio',titulo:tx('Puntos flacos','Puntos febles')});
+  $('#rC').onclick=()=>ir('fichas');
   $('#r2').onclick=()=>fall.length?iniciar({lista:mezclar(fall).slice(0,40),modo:'estudio',titulo:t('falladas')}):toast(t('sinFall'));
   $('#r3').onclick=()=>marc.length?iniciar({lista:mezclar(marc),modo:'estudio',titulo:t('marcadas')}):toast(t('sinMarc'));
   $('#r4').onclick=()=>{const l=BANCO.filter(p=>!S.q[p.id]||!S.q[p.id].v);
     l.length?iniciar({lista:mezclar(l).slice(0,30),modo:'estudio',titulo:t('sinVer')}):toast(t('sinPreg'));};
+  const rn=$('#rN'); if(rn)rn.onclick=()=>iniciar({lista:mezclar(BANCO.filter(p=>!p.inc&&novDe(p).length)).slice(0,40),modo:'estudio',titulo:tx('Novedades normativas 2026','Novidades normativas 2026')});
+  $('#v-repaso').querySelectorAll('[data-nov]').forEach(b=>b.onclick=()=>
+    iniciar({lista:mezclar(novLista(b.dataset.nov)),modo:'estudio',titulo:tx('Novedades normativas 2026','Novidades normativas 2026')}));
+  $('#v-repaso').querySelectorAll('[data-dn]').forEach(b=>b.onclick=()=>{
+    const p=BANCO.find(x=>x.id===b.dataset.dn);if(p)iniciar({lista:[p],modo:'estudio',titulo:t('marcadas')});});
+  $('#v-repaso').querySelectorAll('[data-dt]').forEach(b=>b.onclick=()=>{
+    const p=BANCO.find(x=>x.id===b.dataset.dt);if(p)verEnTema(p);});
 }
 
 function pintarStats(){
@@ -651,12 +770,7 @@ function pintarAjustes(){
    <label class="row"><span>${t('letra')}<small id="aFsV">${S.cfg.fs} px</small></span><input type="range" id="aFs" min="14" max="24" step="1" value="${S.cfg.fs}"></label>
    <p class="mini" style="margin:2px 2px 0">${t('letraS')}</p>
   </div>
-  <div class="card"><h3>${S.cfg.lang==='gl'?'Datos':'Datos'}</h3>
-   <button class="btn sec" id="aExp">⬇ ${t('exportar')}</button>
-   <button class="btn sec" id="aImp">⬆ ${t('importar')}</button>
-   <input type="file" id="aFile" accept="application/json" hidden>
-   <button class="btn sec" id="aDel" style="color:var(--ko)">${t('borrar')}<small>${t('borrarS')}</small></button>
-  </div>
+  ${htmlCopia()}
   <div class="card"><h3>${S.cfg.lang==='gl'?'Sobre a aplicación':'Sobre la aplicación'}</h3>
    <p class="mini">${S.cfg.lang==='gl'
      ? 'Preparación do proceso selectivo para o ingreso no corpo de auxiliares de carácter técnico de Administración especial da Xunta de Galicia, subgrupo C2, escala auxiliar de cociña. Programa do DOG nº 123 do 30 de xuño de 2025.'
@@ -671,14 +785,49 @@ function pintarAjustes(){
   $('#aBar').onchange=e=>{S.cfg.barajar=e.target.checked;guardar();};
   $('#aVer').onchange=e=>{S.cfg.soloVerif=e.target.checked;guardar();pintarInicio();toast(t('guardado'));};
   $('#aFs').oninput=e=>{aplicarLetra(+e.target.value);$('#aFsV').textContent=S.cfg.fs+' px';guardar();};
-  $('#aExp').onclick=()=>{
-    const b=new Blob([JSON.stringify(S)],{type:'application/json'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(b);
-    a.download='progreso-test-cocina-'+HOY()+'.json';a.click();toast(t('guardado'));};
+  ligarCopia();
+}
+/* Tarjeta «Copia de seguridad» de Ajustes */
+function htmlCopia(){
+  const d=diasDesde(S.bk.f);
+  const estado=S.bk.f?tx('Última copia: '+S.bk.f+' (hace '+d+' días)','Última copia: '+S.bk.f+' (hai '+d+' días)'):tx('Todavía no has guardado ninguna copia.','Aínda non gardaches ningunha copia.');
+  let h=`<div class="card"><h3>${tx('Copia de seguridad','Copia de seguridade')}</h3>
+    <p>${tx('Tu progreso se guarda solo en este navegador. Una copia es un archivo pequeño que puedes guardar en tu nube o enviarte por correo.','O teu progreso gárdase só neste navegador. Unha copia é un ficheiro pequeno que podes gardar na túa nube ou enviarte por correo.')}</p>
+    <p class="mini">${estado}${protegido===true?' · '+tx('Almacenamiento protegido','Almacenamento protexido'):protegido===false?' · '+tx('El navegador podría borrar los datos si falta espacio','O navegador podería borrar os datos se falta espazo'):''}</p>
+    <button class="btn" id="aExp">${tx('Guardar copia','Gardar copia')}<small>${tx('Descarga un archivo con todo tu progreso, notas y plan','Descarga un ficheiro con todo o teu progreso, notas e plan')}</small></button>
+    <button class="btn sec" id="aImp">${tx('Restaurar una copia','Restaurar unha copia')}<small>${tx('Elige un archivo guardado antes; podrás fusionarlo o reemplazar','Escolle un ficheiro gardado antes; poderás fusionalo ou substituír')}</small></button>
+    <input type="file" id="aFile" accept="application/json,.json" hidden>`;
+  if(copiaPend){
+    const r=resumenCopia(copiaPend.datos);
+    h+=`<div class="copia-p" role="group" aria-label="${tx('Copia leída','Copia lida')}"><b>${tx('Copia leída','Copia lida')}${copiaPend.fecha?' · '+copiaPend.fecha.slice(0,10):''}</b>
+      <span>${r.hechas} ${tx('respuestas','respostas')} · ${r.preg} ${t('preg')} · ${tx('racha','racha')} ${r.racha}${r.notas?' · '+r.notas+' '+tx('notas','notas'):''}${r.fichas?' · '+r.fichas+' '+tx('fichas','fichas'):''}</span>
+      <div class="fila"><button class="btn sm" id="cFus">${tx('Fusionar con lo de este dispositivo','Fusionar co deste dispositivo')}</button>
+      <button class="btn sm sec" id="cRep">${tx('Reemplazar todo','Substituír todo')}</button>
+      <button class="chip mini" id="cNo">${tx('Cancelar','Cancelar')}</button></div>
+      <small>${tx('Fusionar conserva lo mejor de cada lado (la fecha de repaso más reciente de cada pregunta). Reemplazar deja este dispositivo igual que la copia. En los dos casos se guarda antes una copia de seguridad interna.','Fusionar conserva o mellor de cada lado (a data de repaso máis recente de cada pregunta). Substituír deixa este dispositivo igual que a copia. Nos dous casos gárdase antes unha copia de seguridade interna.')}</small></div>`;
+  }
+  if(hayRedSeguridad())h+=`<button class="btn sec" id="aDesh">${tx('Deshacer la última restauración','Desfacer a última restauración')}</button>`;
+  h+=`<button class="btn sec" id="aDel" style="color:var(--ko)">${t('borrar')}<small>${t('borrarS')}</small></button></div>`;
+  return h;
+}
+function ligarCopia(){
+  $('#aExp').onclick=()=>guardarCopia().then(ok=>{if(ok)pintarAjustes();});
   $('#aImp').onclick=()=>$('#aFile').click();
-  $('#aFile').onchange=e=>{const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();r.onload=()=>{try{S=Object.assign(JSON.parse(JSON.stringify(D)),JSON.parse(r.result));guardar();aplicarCfg();ir('inicio');toast(t('guardado'));}catch(x){alert('Error');}};r.readAsText(f);};
-  $('#aDel').onclick=()=>{if(confirm(t('confirmBorrar'))){localStorage.removeItem(LS);S=JSON.parse(JSON.stringify(D));aplicarCfg();ir('inicio');}};
+  $('#aFile').onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{copiaPend=leerCopia(r.result);pintarAjustes();}
+      catch(x){copiaPend=null;toast(tx('Ese archivo no es una copia de la aplicación','Ese ficheiro non é unha copia da aplicación'));}
+    };
+    r.readAsText(f);
+  };
+  const fin=m=>{restaurarCon(copiaPend.datos,m);copiaPend=null;ir('inicio');toast(tx('Copia restaurada','Copia restaurada'));};
+  const cf=$('#cFus'); if(cf)cf.onclick=()=>fin('fusionar');
+  const cr=$('#cRep'); if(cr)cr.onclick=()=>{if(confirm(tx('Esto sustituye todo el progreso de este dispositivo por el de la copia. ¿Continuar?','Isto substitúe todo o progreso deste dispositivo polo da copia. Continuar?')))fin('reemplazar');};
+  const cn=$('#cNo'); if(cn)cn.onclick=()=>{copiaPend=null;pintarAjustes();};
+  const dh=$('#aDesh'); if(dh)dh.onclick=()=>{if(deshacerRestauracion()){ir('inicio');toast(tx('Restauración deshecha','Restauración desfeita'));}};
+  $('#aDel').onclick=()=>{if(confirm(t('confirmBorrar'))){guardarRedSeguridad();localStorage.removeItem(LS);S=JSON.parse(JSON.stringify(D));aplicarCfg();ir('inicio');}};
 }
 
 /* =========================================================
@@ -824,7 +973,7 @@ function abrirTema(k,scrollY,resaltar){
     <button class="chip mini" id="lVolver">‹</button>
     <b>${esAnexo(k)?esc(d.t):k+' · '+esc(nom(k))}</b>
     <button class="chip mini" id="lIdx">${t('indice')}</button>
-    ${esAnexo(k)?'':`<button class="chip mini" id="lTest">${t('test')}</button>`}
+    ${esAnexo(k)?'':`<button class="chip mini ${S.leidos[k]?'on':''}" id="lLeido" aria-pressed="${!!S.leidos[k]}">${S.leidos[k]?'✓':'○'} ${tx('Leído','Lido')}</button><button class="chip mini" id="lTest">${t('test')}</button>`}
   </div>`;
   h+=`<input class="buscar" id="lq" type="search" placeholder="${t('buscarEn')}" autocomplete="off">`;
   h+=`<div id="idx" style="display:none">`;
@@ -842,6 +991,10 @@ function abrirTema(k,scrollY,resaltar){
   ir('lectura');
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==='temario'));
   $('#lVolver').onclick=()=>{if(J&&J._vuelta){J._vuelta=false;ir('play');pintarPlay();}else ir('temario');};
+  const ll=$('#lLeido'); if(ll)ll.onclick=()=>{
+    if(S.leidos[k])delete S.leidos[k]; else S.leidos[k]=HOY();
+    guardar();ll.classList.toggle('on',!!S.leidos[k]);ll.setAttribute('aria-pressed',!!S.leidos[k]);
+    ll.textContent=(S.leidos[k]?'✓ ':'○ ')+tx('Leído','Lido');};
   $('#lIdx').onclick=()=>{const e=$('#idx');e.style.display=e.style.display==='none'?'block':'none';};
   if($('#lTest'))$('#lTest').onclick=()=>{const l=elegir(pool({temas:[k]}),20,true);
     if(!l.length){toast(t('sinPreg'));return;}
@@ -899,6 +1052,465 @@ function abrirTema(k,scrollY,resaltar){
   },{passive:true});
 })();
 
+/* =========================================================
+   NOVEDADES NORMATIVAS 2026
+   Normas publicadas entre el corte de la convocatoria anterior (29/07/2025) y
+   el de esta (27/11/2026). Fuente: NORMATIVA-VIVA.md §2. Una pregunta se
+   etiqueta si su texto (castellano, gallego o fuente) menciona la norma.
+   ========================================================= */
+const NOV=[
+ {k:'ce',es:'Reforma de la Constitución (art. 69.3, Formentera)',gl:'Reforma da Constitución (art. 69.3, Formentera)',temas:['G1'],re:[/Formentera|cuarta reforma|209 senadores|cuatro reformas|catro reformas/i]},
+ {k:'l5g4',es:'Ley 5/2025: Comisionado y Consejo Consultivo (Ley 1/2016)',gl:'Lei 5/2025: Comisionado e Consello Consultivo (Lei 1/2016)',temas:['G4'],re:[/Ley 5\/2025|Lei 5\/2025/,/Consejo Consultivo|Consello Consultivo/],y:/Transparencia|Comisionado/},
+ {k:'l5g5',es:'Ley 5/2025: permisos y período de prueba (Ley 2/2015)',gl:'Lei 5/2025: permisos e período de proba (Lei 2/2015)',temas:['G5'],re:[/Ley 5\/2025|Lei 5\/2025/,/permiso parental|permiso parental/i,/(período|periodo) de prueba[^"]{0,80}interin|interin[^"]{0,80}(período|periodo) de prueba/i]},
+ {k:'l126',es:'Ley 1/2026: autónomos en la ley de prevención de riesgos',gl:'Lei 1/2026: autónomos na lei de prevención de riscos',temas:['G8'],re:[/Ley 1\/2026|Lei 1\/2026/,/trabajadoras? autónom|traballadoras? autónom/i]},
+ {k:'l426',es:'Ley 4/2026: reforma de la ley de discapacidad',gl:'Lei 4/2026: reforma da lei de discapacidade',temas:['G7'],re:[/Ley 4\/2026|Lei 4\/2026/]},
+ {k:'l112',es:'Ley 5/2025: art. 112 bis de la Ley 1/2024',gl:'Lei 5/2025: art. 112 bis da Lei 1/2024',temas:['E12'],re:[/112 bis/i]},
+ {k:'rd142',es:'RD 142/2026: seis normas de calidad (pan, derivados cárnicos, vinagres…)',gl:'RD 142/2026: seis normas de calidade (pan, derivados cárnicos, vinagres…)',re:[/142\/2026/]},
+ {k:'r343',es:'Reglamento Delegado (UE) 2026/343: carne de aves',gl:'Regulamento Delegado (UE) 2026/343: carne de aves',re:[/2026\/343/]},
+ {k:'rd1082',es:'RD 1082/2025: denominaciones comerciales de la pesca',gl:'RD 1082/2025: denominacións comerciais da pesca',re:[/1082\/2025/]}
+];
+let _nov=null;
+function novDe(p){
+  if(!_nov){
+    _nov=new Map();
+    BANCO.forEach(q=>{
+      const c=JSON.stringify([q.es,q.gl,q.ref]);
+      const ks=NOV.filter(n=>(!n.temas||n.temas.includes(q.tema))&&n.re.some(r=>r.test(c))&&(!n.y||n.y.test(c))).map(n=>n.k);
+      if(ks.length)_nov.set(q.id,ks);
+    });
+  }
+  return _nov.get(p.id)||[];
+}
+const novLista=k=>pool({}).filter(p=>novDe(p).includes(k));
+
+/* =========================================================
+   COPIA DE SEGURIDAD
+   El progreso vive solo en el navegador. Aquí se guarda y se recupera, con
+   fusión (no solo reemplazo) y con red de seguridad antes de restaurar.
+   ========================================================= */
+const diasDesde=f=>f?Math.round((Date.parse(HOY()+'T12:00:00')-Date.parse(f+'T12:00:00'))/864e5):Infinity;
+function hechasTotal(){let n=0;Object.values(S.q).forEach(e=>{n+=(e&&e.v)||0;});return n;}
+let protegido=null; // true/false cuando el navegador contesta; null si no se sabe
+function pedirPersistencia(){
+  try{
+    if(navigator.storage&&navigator.storage.persist&&hechasTotal()>0){
+      navigator.storage.persisted().then(p=>p?true:navigator.storage.persist()).then(p=>{protegido=!!p;}).catch(()=>{});
+    }
+  }catch(e){}
+}
+function copiaTexto(){return JSON.stringify({app:'auxcocina',formato:2,fecha:new Date().toISOString(),datos:S});}
+async function guardarCopia(){
+  const cuerpo=copiaTexto(), nombre='copia-auxcocina-'+HOY()+'.json';
+  let enviada=false;
+  try{
+    /* En el móvil se ofrece el menú de compartir (Drive, correo, WhatsApp…);
+       en el ordenador, descarga directa. */
+    if(matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.share){
+      const f=new File([cuerpo],nombre,{type:'application/json'});
+      if(navigator.canShare({files:[f]})){await navigator.share({files:[f],title:nombre});enviada=true;}
+    }
+  }catch(e){if(e&&e.name==='AbortError')return false;}
+  if(!enviada){
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([cuerpo],{type:'application/json'}));
+    a.download=nombre;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  }
+  S.bk.f=HOY();S.bk.s='';guardar();
+  toast(tx('Copia guardada','Copia gardada'));
+  return true;
+}
+/* Lee una copia (la nueva con sobre o el volcado antiguo del estado) y la deja
+   con la forma del estado actual. Lanza un error si no es una copia. */
+function leerCopia(texto){
+  const o=JSON.parse(texto);
+  const d=(o&&typeof o==='object'&&o.datos&&typeof o.datos==='object')?o.datos:o;
+  if(!d||typeof d!=='object'||!d.q||typeof d.q!=='object'||Array.isArray(d.q))throw new Error('formato');
+  const base=JSON.parse(JSON.stringify(D));
+  const c=Object.assign(base,d);
+  ['cfg','racha','bk','plan'].forEach(k=>{c[k]=Object.assign({},D[k],(d[k]&&typeof d[k]==='object')?d[k]:{});});
+  ['marc','ses','simh','migr'].forEach(k=>{if(!Array.isArray(c[k]))c[k]=[];});
+  ['q','hist','leidos','fi','notas'].forEach(k=>{if(!c[k]||typeof c[k]!=='object'||Array.isArray(c[k]))c[k]={};});
+  migrarIds(false,c); // una copia anterior a una revisión del banco trae ids viejos
+  return {datos:c,fecha:(o&&o.fecha)||''};
+}
+function resumenCopia(d){
+  let hechas=0;Object.values(d.q).forEach(e=>{hechas+=(e&&e.v)||0;});
+  return {hechas,preg:Object.keys(d.q).length,racha:(d.racha&&d.racha.n)||0,notas:Object.keys(d.notas||{}).length,fichas:Object.keys(d.fi||{}).length};
+}
+function fusionar(a,b){
+  const r=JSON.parse(JSON.stringify(a));
+  const mejor=(x,y)=>!x||(y.v||0)>(x.v||0)||((y.v||0)===(x.v||0)&&(y.due||'')>(x.due||''));
+  Object.keys(b.q).forEach(id=>{if(mejor(r.q[id],b.q[id]))r.q[id]=b.q[id];});
+  Object.keys(b.fi).forEach(id=>{if(mejor(r.fi[id],b.fi[id]))r.fi[id]=b.fi[id];});
+  b.marc.forEach(id=>{if(!r.marc.includes(id))r.marc.push(id);});
+  Object.keys(b.hist).forEach(f=>{const x=r.hist[f],y=b.hist[f];if(!x||(y.n||0)>(x.n||0))r.hist[f]=y;});
+  Object.keys(b.notas).forEach(id=>{const x=r.notas[id],y=b.notas[id];if(!x||(y.f||'')>(x.f||''))r.notas[id]=y;});
+  Object.keys(b.leidos).forEach(k=>{if(!r.leidos[k]||b.leidos[k]<r.leidos[k])r.leidos[k]=b.leidos[k];});
+  if((b.racha.d||'')>(r.racha.d||'')||(b.racha.d===r.racha.d&&b.racha.n>r.racha.n))r.racha=b.racha;
+  const unir=(A,B,clave)=>{const v=new Set(A.map(clave));B.forEach(x=>{if(!v.has(clave(x)))A.push(x);});return A.sort((x,y)=>(y.f||'').localeCompare(x.f||''));};
+  r.ses=unir(r.ses,b.ses,x=>[x.f,x.tit,x.n,x.seg].join('|')).slice(0,40);
+  r.simh=unir(r.simh,b.simh,x=>[x.f,x.tit,x.pts].join('|')).slice(0,30);
+  if(!r.plan.ini&&b.plan.ini){r.plan=Object.assign({},b.plan);}
+  if((b.bk.f||'')>(r.bk.f||''))r.bk.f=b.bk.f;
+  r.migr=Array.from(new Set(r.migr.concat(b.migr)));
+  return r;
+}
+function guardarRedSeguridad(){try{localStorage.setItem(LS+'-antes',JSON.stringify(S));}catch(e){}}
+function hayRedSeguridad(){try{return !!localStorage.getItem(LS+'-antes');}catch(e){return false;}}
+function restaurarCon(datos,modo){
+  guardarRedSeguridad();
+  if(modo==='fusionar'){S=fusionar(S,datos);}
+  else{S=datos;}
+  S.bk.f=HOY();
+  guardar();aplicarCfg();
+}
+function deshacerRestauracion(){
+  try{
+    const r=localStorage.getItem(LS+'-antes');if(!r)return false;
+    S=Object.assign(JSON.parse(JSON.stringify(D)),JSON.parse(r));
+    localStorage.removeItem(LS+'-antes');guardar();aplicarCfg();return true;
+  }catch(e){return false;}
+}
+let copiaPend=null; // copia leída y a la espera de que se elija cómo aplicarla
+function avisoCopia(){
+  if(hechasTotal()<30)return '';
+  const d=diasDesde(S.bk.f);
+  if(d<=7)return '';
+  if(S.bk.s&&S.bk.s>HOY())return '';
+  const cuando=S.bk.f?tx('Hace '+d+' días que no la guardas.','Hai '+d+' días que non a gardas.'):tx('Todavía no has guardado ninguna.','Aínda non gardaches ningunha.');
+  return `<div class="aviso" role="note">
+    <div><b>${tx('Guarda una copia de tu progreso','Garda unha copia do teu progreso')}</b>
+    <span>${tx('Vive solo en este dispositivo y el navegador puede borrarlo.','Vive só neste dispositivo e o navegador pode borralo.')} ${cuando}</span></div>
+    <div class="fila"><button class="btn sm" id="avCopia">${tx('Guardar copia','Gardar copia')}</button>
+    <button class="chip mini" id="avLuego">${tx('Más tarde','Máis tarde')}</button></div></div>`;
+}
+
+/* =========================================================
+   PLAN DE ESTUDIO
+   Reparte los 22 temas entre el inicio del plan y las tres semanas finales,
+   que se dedican a repasar. De ahí salen las tareas de cada día.
+   ========================================================= */
+const aFecha=f=>new Date(f+'T12:00:00');
+const difDias=(a,b)=>Math.round((aFecha(b)-aFecha(a))/864e5);
+const masDias=(f,n)=>{const d=aFecha(f);d.setDate(d.getDate()+n);return FECHA(d);};
+const REPASO_FINAL=21;
+const vistasN=()=>pool({}).filter(p=>S.q[p.id]&&S.q[p.id].v).length;
+function asegurarPlan(){
+  if(!S.plan.ini){S.plan.ini=HOY();S.plan.v0=vistasN();guardar();}
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(S.plan.ex||''))S.plan.ex=D.plan.ex;
+}
+function planDatos(){
+  asegurarPlan();
+  const P=S.plan, hoy=HOY(), ex=P.ex, ini=P.ini;
+  const dias=Math.min(7,Math.max(1,+P.dias||6));
+  const nRev=Math.min(REPASO_FINAL,Math.max(0,Math.floor(difDias(ini,ex)*0.3)));
+  const finLect=masDias(ex,-nRev);
+  const total=Math.max(1,difDias(ini,finLect));
+  const claves=Object.keys(TEMAS);
+  const pesos=claves.map(k=>40+pool({temas:[k]}).length);
+  const suma=pesos.reduce((a,b)=>a+b,0);
+  let acum=0;
+  const tramos=claves.map((k,i)=>{
+    const d0=Math.round(acum/suma*total); acum+=pesos[i];
+    const d1=Math.round(acum/suma*total);
+    return {tema:k,d0:masDias(ini,d0),d1:masDias(ini,Math.max(d1,d0+1))};
+  });
+  const fase=hoy>=ex?'pasado':hoy>=finLect?'repaso':'lectura';
+  const deHoy=tramos.find(x=>x.d0<=hoy&&hoy<x.d1)||null;
+  const atrasados=tramos.filter(x=>x.d1<=hoy&&!S.leidos[x.tema]);
+  return {ex,ini,dias,finLect,total,tramos,fase,deHoy,atrasados,restan:difDias(hoy,ex)};
+}
+/* Fichas de hoy: las que tocan repasar más un máximo de 10 nuevas al día. */
+function fichasCola(){
+  const hoy=HOY();
+  const due=FICH.filter(f=>{const e=S.fi[f.id];return e&&e.v>0&&e.due<=hoy;});
+  const vistasHoy=FICH.filter(f=>S.fi[f.id]&&S.fi[f.id].s===hoy).length;
+  const sin=FICH.filter(f=>!(S.fi[f.id]&&S.fi[f.id].v));
+  const hechasHoy=FICH.filter(f=>S.fi[f.id]&&S.fi[f.id].u===hoy).length;
+  return {due,nuevas:mezclar(sin).slice(0,Math.max(0,10-vistasHoy)),hechasHoy,sin:sin.length};
+}
+function tareasHoy(){
+  const P=planDatos(), hoy=HOY(), h=S.hist[hoy]||{n:0,o:0,nv:0};
+  const base=pool({}), sinVer=base.filter(p=>!(S.q[p.id]&&S.q[p.id].v)).length;
+  const fc=fichasCola(), nFich=fc.due.length+fc.nuevas.length;
+  const T=[];
+  if(P.fase==='lectura'){
+    const leer=P.atrasados[0]?P.atrasados[0].tema:(P.deHoy?P.deHoy.tema:null);
+    if(leer)T.push({k:'leer',tema:leer,hecho:!!S.leidos[leer],
+      tit:tx('Leer el tema '+leer,'Ler o tema '+leer),det:nom(leer)+(P.atrasados[0]?' · '+tx('atrasado','atrasado'):''),prog:''});
+    const dEst=Math.max(1,Math.round(Math.max(0,difDias(hoy,P.finLect))*P.dias/7));
+    const obj=Math.min(60,Math.max(5,Math.ceil((sinVer+(h.nv||0))/dEst)));
+    T.push({k:'nuevas',hecho:(h.nv||0)>=obj||sinVer===0,obj,
+      tit:tx('Preguntas nuevas','Preguntas novas'),det:tx('Las que todavía no has visto','As que aínda non viches'),prog:Math.min(h.nv||0,obj)+'/'+obj});
+  }else if(P.fase==='repaso'){
+    T.push({k:'flacos',hecho:h.n>=25,tit:tx('Puntos flacos','Puntos febles'),det:tx('25 preguntas donde más fallas','25 preguntas onde máis fallas'),prog:Math.min(h.n,25)+'/25'});
+    const ult=(S.simh[0]||{}).f, dd=ult?diasDesde(ult):Infinity;
+    T.push({k:'simu',hecho:ult===hoy,tit:tx('Simulacro del primer ejercicio','Simulacro do primeiro exercicio'),
+      det:ult?tx('Último: hace '+dd+' días','Último: hai '+dd+' días'):tx('Todavía no has hecho ninguno','Aínda non fixeches ningún'),prog:''});
+  }
+  if(fc.hechasHoy+nFich>0)T.push({k:'fichas',hecho:nFich===0,tit:tx('Fichas de cifras','Fichas de cifras'),
+    det:tx('Las cifras que más se confunden','As cifras que máis se confunden'),prog:fc.hechasHoy+'/'+(fc.hechasHoy+nFich)});
+  return {P,T,sinVer,total:base.length,h};
+}
+function lanzarTarea(t0){
+  if(t0.k==='leer'){abrirTema(t0.tema);return;}
+  if(t0.k==='nuevas'){
+    const l=pool({}).filter(p=>!(S.q[p.id]&&S.q[p.id].v));
+    iniciar({lista:mezclar(l).slice(0,Math.max(10,t0.obj-((S.hist[HOY()]||{}).nv||0))),modo:'estudio',titulo:tx('Preguntas nuevas','Preguntas novas')});return;
+  }
+  if(t0.k==='flacos'){iniciar({lista:mezclar(puntosFlacos(25)),modo:'estudio',titulo:tx('Puntos flacos','Puntos febles')});return;}
+  if(t0.k==='simu'){ir('simulacro');return;}
+  if(t0.k==='fichas'){ir('fichas');return;}
+}
+function marcaTarea(x){
+  return `<button class="hoy-f ${x.hecho?'ok':''}" data-tarea="${x.k}">
+    <span class="caja" aria-hidden="true">${x.hecho?'✓':''}</span>
+    <span class="tx"><b>${esc(x.tit)}</b><small>${esc(x.det)}</small></span>
+    ${x.prog?`<em>${x.prog}</em>`:''}</button>`;
+}
+function bloqueHoy(){
+  const {P,T}=tareasHoy();
+  if(P.fase==='pasado')return '';
+  const hechas=T.filter(x=>x.hecho).length;
+  const cab=P.fase==='repaso'?tx('Repaso final','Repaso final'):tx('Plan de hoy','Plan de hoxe');
+  return `<div class="hoy"><div class="hoy-t"><b>${cab}</b>
+    <span>${hechas}/${T.length} · ${P.restan} ${tx('días para el examen','días para o exame')}</span></div>
+    ${T.map(marcaTarea).join('')}
+    <button class="hoy-v" id="qPlan">${tx('Plan y calendario','Plan e calendario')} ›</button></div>`;
+}
+function ligarHoy(){
+  const {T}=tareasHoy();
+  document.querySelectorAll('#v-inicio [data-tarea]').forEach(b=>b.onclick=()=>{
+    const x=T.find(y=>y.k===b.dataset.tarea);if(x)lanzarTarea(x);});
+  const p=$('#qPlan');if(p)p.onclick=()=>ir('plan');
+}
+
+let calMes=null; // 'AAAA-MM'
+function htmlCalendario(P){
+  const [y,m]=(calMes||HOY().slice(0,7)).split('-').map(Number);
+  const nd=new Date(y,m,0).getDate(), off=(new Date(y,m-1,1).getDay()+6)%7;
+  const nombres=tx(['L','M','X','J','V','S','D'],['L','M','M','X','V','S','D']);
+  const hoy=HOY();
+  let c=nombres.map(n=>`<div class="cal-d">${n}</div>`).join('');
+  for(let i=0;i<off;i++)c+='<div class="cal-v"></div>';
+  for(let d=1;d<=nd;d++){
+    const f=FECHA(new Date(y,m-1,d)), n=(S.hist[f]||{n:0}).n;
+    let cl='cal-c',tag='',aria=f;
+    if(n)cl+=n>=25?' l3':n>=10?' l2':' l1';
+    if(f===hoy)cl+=' cal-hoy';
+    if(f===P.ex){cl+=' ex';tag='EX';aria+=' · '+tx('examen','exame');}
+    else if(f>=P.finLect&&f<P.ex){tag='R';}
+    else if(f>=P.ini&&f<P.finLect){const tr=P.tramos.find(x=>x.d0<=f&&f<x.d1);if(tr){tag=tr.tema;if(S.leidos[tr.tema])cl+=' leido';}}
+    if(n)aria+=' · '+n+' '+t('preg');
+    c+=`<div class="${cl}" role="img" aria-label="${aria}"><b>${d}</b><i>${tag}</i></div>`;
+  }
+  const mes=new Date(y,m-1,1).toLocaleDateString(S.cfg.lang==='gl'?'gl':'es',{month:'long',year:'numeric'});
+  return `<div class="card calcard"><div class="cal-t">
+      <button class="chip mini" id="calP" aria-label="${tx('Mes anterior','Mes anterior')}">‹</button>
+      <h2>${mes}</h2>
+      <button class="chip mini" id="calN" aria-label="${tx('Mes siguiente','Mes seguinte')}">›</button></div>
+    <div class="cal">${c}</div>
+    <p class="mini">${tx('Cada casilla muestra el tema que toca leer ese día (R = repaso final, EX = examen). Más verde = más preguntas hechas.','Cada casa mostra o tema que toca ler ese día (R = repaso final, EX = exame). Máis verde = máis preguntas feitas.')}</p></div>`;
+}
+function pintarPlan(){
+  const {P,T,sinVer,total}=tareasHoy();
+  const hoy=HOY();
+  let h=`<div class="card"><h2>${tx('Plan de estudio','Plan de estudo')}</h2>`;
+  if(P.fase==='pasado'){
+    h+=`<p>${tx('La fecha del examen ya ha pasado. Cámbiala más abajo si se ha aplazado.','A data do exame xa pasou. Cámbiaa máis abaixo se se aprazou.')}</p></div>`;
+  }else{
+    const trasc=Math.min(1,Math.max(0,difDias(P.ini,hoy)/P.total));
+    const vistas=total-sinVer, v0=Math.min(S.plan.v0||0,total);
+    const esperado=P.fase==='repaso'?total:Math.round(v0+trasc*(total-v0));
+    const dif=vistas-esperado;
+    const pcV=total?vistas/total*100:0, pcC=P.fase==='repaso'?100:trasc*100;
+    h+=`<p>${P.restan} ${tx('días para el examen','días para o exame')} · ${tx('repaso final desde el','repaso final desde o')} ${P.finLect.split('-').reverse().join('/')}</p>
+      <div class="plan-b"><span>${tx('Calendario','Calendario')}</span><i class="bg"><b style="width:${pcC}%"></b></i><em>${Math.round(pcC)} %</em></div>
+      <div class="plan-b"><span>${tx('Preguntas vistas','Preguntas vistas')}</span><i class="bg"><b style="width:${pcV}%"></b></i><em>${Math.round(pcV)} %</em></div>
+      <p class="veredicto-p ${dif>=-5?'ok':'no'}">${dif>=-5
+        ?(dif>20?tx('Vas '+dif+' preguntas por delante del calendario.','Vas '+dif+' preguntas por diante do calendario.'):tx('Vas al día.','Vas ao día.'))
+        :tx('Te faltan '+(-dif)+' preguntas nuevas para ir al día.','Fáltanche '+(-dif)+' preguntas novas para ir ao día.')}</p>`;
+    if(P.fase==='lectura'&&P.atrasados.length)
+      h+=`<p class="veredicto-p no">${tx('Temas del calendario sin marcar como leídos: ','Temas do calendario sen marcar como lidos: ')}${P.atrasados.map(x=>x.tema).join(', ')}</p>`;
+    h+=`</div><div class="hoy">${T.map(marcaTarea).join('')}</div>`;
+  }
+  h+=`<div class="card"><h3>${tx('Ajustes del plan','Axustes do plan')}</h3>
+    <label class="row"><span>${tx('Fecha del examen','Data do exame')}<small>${tx('La convocatoria dice «no antes del 30/04/2027». Cámbiala cuando se publique la fecha.','A convocatoria di «non antes do 30/04/2027». Cámbiaa cando se publique a data.')}</small></span>
+      <input type="date" id="pEx" value="${P.ex}"></label>
+    <label class="row"><span>${tx('Días de estudio por semana','Días de estudo por semana')}</span>
+      <select id="pDias">${[3,4,5,6,7].map(n=>`<option ${n===P.dias?'selected':''}>${n}</option>`).join('')}</select></label>
+    <button class="btn sec" id="pRehacer">${tx('Rehacer el plan desde hoy','Refacer o plan desde hoxe')}<small>${tx('Reparte los temas entre hoy y el repaso final. No borra tu progreso.','Reparte os temas entre hoxe e o repaso final. Non borra o teu progreso.')}</small></button></div>`;
+  h+=htmlCalendario(P);
+  $('#v-plan').innerHTML=h;
+  $('#v-plan').querySelectorAll('[data-tarea]').forEach(b=>b.onclick=()=>{const x=T.find(y=>y.k===b.dataset.tarea);if(x)lanzarTarea(x);});
+  $('#pEx').onchange=e=>{if(/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)){S.plan.ex=e.target.value;guardar();pintarPlan();}};
+  $('#pDias').onchange=e=>{S.plan.dias=+e.target.value;guardar();pintarPlan();};
+  $('#pRehacer').onclick=()=>{S.plan.ini=HOY();S.plan.v0=vistasN();guardar();pintarPlan();toast(tx('Plan rehecho desde hoy','Plan refeito desde hoxe'));};
+  const mover=n=>{const [y,m]=(calMes||HOY().slice(0,7)).split('-').map(Number);const d=new Date(y,m-1+n,1);calMes=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');pintarPlan();};
+  $('#calP').onclick=()=>mover(-1);
+  $('#calN').onclick=()=>mover(1);
+}
+
+/* =========================================================
+   PUNTOS FLACOS
+   Mezcla lo que más falla, los temas peor dominados y lo que toca repasar,
+   sin dejar que un solo tema se coma el test.
+   ========================================================= */
+function tasasTema(){
+  const r={};
+  Object.keys(TEMAS).forEach(k=>{
+    let v=0,o=0;
+    pool({temas:[k]}).forEach(p=>{const e=S.q[p.id];if(e){v+=e.v||0;o+=e.o||0;}});
+    r[k]=v>=5?o/v:null;
+  });
+  return r;
+}
+function puntosFlacos(n){
+  n=n||25;
+  const hoy=HOY(), tt=tasasTema();
+  const cand=pool({}).map(p=>{
+    const e=S.q[p.id], tT=tt[p.tema], tQ=e&&e.v?e.o/e.v:null;
+    const toca=!!(e&&e.v>0&&e.due&&e.due<=hoy);
+    if(e&&e.v>=2&&tQ>=0.9&&!toca)return null; // dominada y sin repaso pendiente
+    let w=Math.random()*0.15;
+    w+=tT===null?0.3:(1-tT)*0.5;
+    w+=tQ===null?0.15:(1-tQ)*0.5;
+    if(toca)w+=0.3;
+    if(e&&e.l)w+=Math.min(0.2,e.l*0.05);
+    return {p,w};
+  }).filter(Boolean).sort((a,b)=>b.w-a.w);
+  const max=Math.ceil(n*0.4), cuenta={}, sel=[];
+  for(const c of cand){
+    if(sel.length>=n)break;
+    const k=c.p.tema; if((cuenta[k]||0)>=max)continue;
+    cuenta[k]=(cuenta[k]||0)+1; sel.push(c.p);
+  }
+  return sel;
+}
+function resumenFlacos(){
+  const tt=tasasTema();
+  const peor=Object.keys(tt).filter(k=>tt[k]!==null).sort((a,b)=>tt[a]-tt[b]).slice(0,3);
+  return peor.length?tx('Falla más en ','Falla máis en ')+peor.map(k=>k+' ('+Math.round(tt[k]*100)+' %)').join(', ')
+                    :tx('Aún no hay datos: mezcla lo menos visto','Aínda non hai datos: mestura o menos visto');
+}
+
+/* =========================================================
+   FICHAS DE CIFRAS
+   Cada ficha es una pregunta corta con su dato; se repasan con la misma
+   repetición espaciada que las preguntas del test.
+   ========================================================= */
+const FICH=(window.FICHAS||[]);
+let FS=null; // sesión de fichas en curso
+function pintarFichas(){
+  if(FS){pintarFicha();return;}
+  const fc=fichasCola(), n=fc.due.length+fc.nuevas.length;
+  let h=`<div class="card"><h2>${tx('Fichas de cifras','Fichas de cifras')}</h2>
+    <p>${tx('Una cifra por ficha: plazos, temperaturas, porcentajes y números de artículo que se confunden. Respondes de cabeza, miras la solución y dices cómo te ha ido.','Unha cifra por ficha: prazos, temperaturas, porcentaxes e números de artigo que se confunden. Respondes de cabeza, miras a solución e dis como che foi.')}</p>
+    <p class="mini">${FICH.length} ${tx('fichas','fichas')} · ${fc.due.length} ${tx('para repasar hoy','para repasar hoxe')} · ${fc.sin} ${tx('sin ver','sen ver')}</p></div>`;
+  h+=n?`<button class="btn" id="fGo">${tx('Empezar','Comezar')} · ${n}<small>${fc.due.length} ${tx('de repaso','de repaso')} + ${fc.nuevas.length} ${tx('nuevas','novas')}</small></button>`
+      :`<div class="vacio">${tx('Hoy no queda ninguna ficha. Vuelve mañana.','Hoxe non queda ningunha ficha. Volve mañá.')}</div>`;
+  const temas=Object.keys(TEMAS).filter(k=>FICH.some(f=>f.tema===k));
+  h+=`<div class="card"><h3>${tx('Todas las fichas','Todas as fichas')}</h3>`;
+  temas.forEach(k=>{
+    h+=`<details class="fl-t"><summary>${k} · ${esc(nom(k))} <em>${FICH.filter(f=>f.tema===k).length}</em></summary>`;
+    FICH.filter(f=>f.tema===k).forEach(f=>{h+=`<div class="fl-f"><b>${esc(f.q)}</b><span>${esc(f.a)}</span></div>`;});
+    h+=`</details>`;
+  });
+  h+=`</div>`;
+  $('#v-fichas').innerHTML=h;
+  const g=$('#fGo');
+  if(g)g.onclick=()=>{
+    const cola=mezclar(fc.due).concat(fc.nuevas).slice(0,30);
+    FS={cola,i:0,ver:false,total:cola.length,rep:{}};
+    pintarFichas();
+  };
+}
+function pintarFicha(){
+  const f=FS.cola[FS.i];
+  if(!f){
+    const total=FS.total;FS=null;
+    $('#v-fichas').innerHTML=`<div class="card nota"><div class="big">${total}</div><div class="sub">${tx('fichas repasadas','fichas repasadas')}</div></div>
+      <button class="btn" id="fFin">${tx('Volver a las fichas','Volver ás fichas')}</button>`;
+    $('#fFin').onclick=pintarFichas;
+    return;
+  }
+  let h=`<div id="barra"><div class="brow"><span>${tx('Ficha','Ficha')} <b>${Math.min(FS.i+1,FS.cola.length)}</b> ${tx('de','de')} ${FS.cola.length}</span>
+      <button class="chip mini" id="fSalir">${tx('Salir','Saír')}</button></div>
+      <div class="prog"><i style="width:${FS.i/FS.cola.length*100}%"></i></div></div>
+    <div class="ficha"><span class="fcod">${f.tema} · ${esc(nom(f.tema))}</span>
+    <div class="fq">${esc(f.q)}</div>`;
+  if(FS.ver){
+    h+=`<div class="fa">${esc(f.a)}</div></div>
+      <div class="fila fcal">
+        <button class="btn sm sec" data-c="0">${t('otravez')}<small>1</small></button>
+        <button class="btn sm sec" data-c="1">${t('dificil')}<small>2</small></button>
+        <button class="btn sm sec" data-c="2">${t('bien')}<small>3</small></button>
+        <button class="btn sm sec" data-c="3">${t('facil')}<small>4</small></button></div>`;
+  }else{
+    h+=`</div><button class="btn" id="fVer">${tx('Mostrar la respuesta','Amosar a resposta')}<small>${tx('Antes, piénsala','Antes, pénsaa')}</small></button>`;
+  }
+  $('#v-fichas').innerHTML=h;
+  window.scrollTo(0,0);
+  $('#fSalir').onclick=()=>{FS=null;pintarFichas();};
+  const v=$('#fVer');if(v)v.onclick=()=>{FS.ver=true;pintarFicha();};
+  $('#v-fichas').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>valorarFicha(+b.dataset.c));
+}
+function valorarFicha(c){
+  const f=FS.cola[FS.i], hoy=HOY();
+  const e=S.fi[f.id]||(S.fi[f.id]={v:0,o:0,ef:2.5,iv:0,due:hoy,l:0,s:hoy});
+  e.v++; if(c>=2)e.o++; e.u=hoy;
+  planificarEn(e,c);
+  if(c===0&&!FS.rep[f.id]){FS.rep[f.id]=1;FS.cola.push(f);} // vuelve una vez más en esta sesión
+  tocarRacha();guardar();
+  FS.i++;FS.ver=false;pintarFicha();
+}
+addEventListener('keydown',ev=>{
+  if(!FS||!$('#v-fichas').classList.contains('on')||ev.target.closest('input,textarea,select'))return;
+  if(ev.key===' '||ev.key==='Enter'){if(!FS.ver&&FS.cola[FS.i]){ev.preventDefault();FS.ver=true;pintarFicha();}}
+  else if(FS.ver&&'1234'.includes(ev.key)&&ev.key.length===1){valorarFicha(+ev.key-1);}
+});
+
+/* =========================================================
+   NOTAS Y ENLACE AL TEMA
+   ========================================================= */
+const normTxt=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const VACIAS=new Set(['sobre','entre','donde','cuando','cuales','segun','tiene','tienen','puede','pueden','deben','estas','estos','todas','todos','siguientes','siguiente','afirmacion','correcta','incorrecta','respecto','cuanto','cuantos','ambas','ninguna','ninguno','articulo','establece','indica','dice','segun','cuyo','cuya','mismo','misma']);
+const _segs={};
+function segmentosTema(k){
+  if(_segs[k])return _segs[k];
+  const html=(TEM[k]||{}).x||'', re=/<h([1-4]) id="([^"]+)"[^>]*>([\s\S]*?)<\/h\1>/g, marcas=[];
+  let m; while((m=re.exec(html)))marcas.push({i:m.index,id:m[2],t:m[3].replace(/<[^>]+>/g,'').trim()});
+  _segs[k]=marcas.map((x,j)=>{
+    const fin=j+1<marcas.length?marcas[j+1].i:html.length;
+    return {id:x.id,t:x.t,s:normTxt(html.slice(x.i,fin).replace(/<[^>]+>/g,' ')),len:fin-x.i};
+  });
+  return _segs[k];
+}
+/* Busca el apartado del tema donde más se concentran las palabras de la
+   pregunta y de su respuesta correcta. Devuelve {id,t} o null. */
+function mejorAncla(p){
+  const seg=segmentosTema(p.tema);
+  if(!seg.length||!p.es)return null;
+  const tk=Array.from(new Set(normTxt(p.es.q+' '+(p.es.o||[])[p.r]+' '+(p.ref||'')).match(/[a-z0-9]{5,}/g)||[])).filter(w=>!VACIAS.has(w));
+  if(tk.length<2)return null;
+  const df={};tk.forEach(w=>{df[w]=seg.filter(x=>x.s.includes(w)).length;});
+  let mejor=null,mp=0;
+  seg.forEach(x=>{
+    let n=0,sc=0;
+    tk.forEach(w=>{if(df[w]&&x.s.includes(w)){n++;sc+=Math.log(1+seg.length/df[w]);}});
+    if(n<2)return;
+    sc=sc/(1+Math.log10(x.len/500+1));
+    if(sc>mp){mp=sc;mejor=x;}
+  });
+  return mejor?{id:mejor.id,t:mejor.t}:null;
+}
+function verEnTema(p){
+  const a=mejorAncla(p);
+  abrirTema(p.tema);
+  if(a){const el=irAAncla(a.id);if(el)toast(tx('Apartado: ','Apartado: ')+a.t.slice(0,60));}
+}
+
 /* ---------- tema visual y arranque ---------- */
 function aplicarTema(){
   const dark=S.cfg.theme==='dark'||(S.cfg.theme==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);
@@ -919,7 +1531,7 @@ function aplicarCfg(){
   $('#bLang').textContent=S.cfg.lang==='es'?'GL':'ES';
   aplicarTema();
 }
-cargar(); aplicarCfg();
+cargar(); aplicarCfg(); pedirPersistencia();
 document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{if(J&&!confirm(t('salirConf')))return;if(J){clearInterval(J._tk);J=null;}ir(b.dataset.v);});
 $('#bLang').onclick=()=>{S.cfg.lang=S.cfg.lang==='es'?'gl':'es';guardar();aplicarCfg();
   const v=document.querySelector('.view.on').id.slice(2);
@@ -933,6 +1545,9 @@ matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(S.cf
   if(q==='simulacro'){ir('simulacro');return;}
   if(q==='repaso'){ir('repaso');return;}
   if(q==='temario'){ir('temario');return;}
+  if(q==='plan'){ir('plan');return;}
+  if(q==='fichas'){ir('fichas');return;}
+  if(q==='flacos'){iniciar({lista:mezclar(puntosFlacos(25)),modo:'estudio',titulo:tx('Puntos flacos','Puntos febles')});return;}
   ir('inicio');
 })();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
