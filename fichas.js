@@ -1,5 +1,5 @@
 /* Fichas de cifras · Auxiliar de cociña C2 · Xunta de Galicia
-   Cada ficha: [tema, anverso, reverso]. El id se forma con el tema y la posición
+   Cada ficha: [tema, anverso, reverso] o [tema, anverso, reverso, tipo]. El id se forma con el tema y la posición
    dentro de ese tema (F-E14-03), así que las fichas nuevas se añaden SIEMPRE al
    final de su tema para no desplazar el progreso guardado.
    Origen: los apartados «Datos memorizables» de los temas (cifras ya verificadas
@@ -31,7 +31,7 @@ const L = [
 ['G3','Caducidad por paralización imputable al interesado','Tras advertirle, transcurridos tres meses'],
 ['G3','Recurso extraordinario de revisión: plazos','Causa a) del apartado 1: cuatro años desde la notificación · resto de casos: tres meses'],
 ['G3','Plazo máximo para resolver el recurso de alzada','Tres meses; pasado ese plazo se puede entender desestimado'],
-['G4','Ley de transparencia y buen gobierno de Galicia: fecha y publicación','Ley 1/2016, de 18 de enero · DOG 15/02/2016 · BOE 10/03/2016'],
+['G4','Ley de transparencia y buen gobierno de Galicia: fecha y publicación','Ley 1/2016, de 18 de enero · DOG núm. 30, 15/02/2016 · BOE núm. 81, 04/04/2016 · en vigor 06/03/2016'],
 ['G4','Principios rectores del art. 2','8'],
 ['G4','Multa coercitiva del art. 4.4','100 a 1.000 € mensuales, con tope del 5 % o 3.000 €'],
 ['G4','Cuánto tiempo son públicas las agendas de altos cargos','Como mínimo un año'],
@@ -133,8 +133,8 @@ const L = [
 ['E7','Huevo: categorías por peso','XL ≥ 73 g · L 63-73 g · M 53-63 g · S < 53 g'],
 ['E7','Huevo: cámara de aire','≤ 6 mm en categoría A · ≤ 4 mm en los «extra»'],
 ['E7','Huevo: marcas','Código del productor de altura mínima 2 mm · categoría B: círculo de 12 mm'],
-['E7','Mayonesa casera: condiciones','70 °C / 2 s (o 63 °C / 20 s si es de consumo inmediato) · ≤ 8 °C · 24 horas con registro de fecha y hora'],
-['E7','Tope de 28 días de la fecha de duración mínima del huevo','Ya no es norma: lo fijaba el art. 13 del Reglamento 589/2008, derogado por el Delegado 2023/2465, que no lo recoge'],
+['E7','Mayonesa elaborada en cocina: huevo y conservación','No recibe tratamiento térmico suficiente: se hace con ovoproducto de establecimiento autorizado (art. 9.2 RD 1021/2022) · se conserva a ≤ 8 °C y se consume en 24 h, registrando fecha y hora (art. 9.3)'],
+['E7','Huevos: los dos plazos de 28 días','Fecha de duración mínima: máximo 28 días desde la puesta (853/2004, anexo III, secc. X, cap. I, punto 4) · suministro al consumidor: máximo 28 días desde la puesta (punto 3). Antes estaba en el art. 13 del 589/2008, derogado'],
 ['E8','Sal para cocer marisco','35 g por litro'],
 ['E8','Plancha para pescado','170-220 °C'],
 ['E8','Suprema de pescado','150-175 g'],
@@ -351,7 +351,7 @@ const L = [
 ['E4','Bearnesa','Holandesa con reducción de vinagre, chalota y estragón (vino y vinagre en proporción 3:1); deriva de la holandesa, no de la mayonesa'],
 ['E4','Salsa de tomate base','1 kg de tomate · 250 g de cebolla · 200 g de zanahoria · 2 ajos · 1 dl de aceite · 1 laurel · 20 g de azúcar; 30 minutos y se enfría en abatidor'],
 ['E4','Las cuatro pequeñas salsas básicas','Mayonesa, holandesa, bearnesa y vinagreta; solo la vinagreta es emulsión inestable'],
-['E4','Mayonesa destinada a venta al público','Prohibido el huevo natural: se usa ovoproducto pasteurizado o conserva'],
+['E4','Mayonesa y salsas con huevo sin cocinar','Ovoproducto de establecimiento autorizado (art. 9.2 RD 1021/2022), se vendan o se sirvan en el comedor; ≤ 8 °C y consumo en 24 h (art. 9.3)'],
 ['E4','Salsas derivadas que se preguntan','Chaud-froid: velouté con gelatina · cardenal: velouté de pescado con mantequilla de bogavante · a la rusa: mayonesa con gelatina · maltesa: holandesa con naranja sanguina · noisette: holandesa con mantequilla avellana'],
 ['E4','Roux: proporción y color','Harina y grasa a partes iguales; tres tipos (blanco, rubio, oscuro); cuanto más tostado, menos espesa'],
 ['E4','Bechamel: harina y mantequilla por litro de leche','30 + 30 g (pasta) · 60 + 60 g (lasaña y canelones) · 150 + 150 g (croquetas)'],
@@ -395,7 +395,7 @@ const L = [
 ['E7','Pasta: ración en seco','60-80 g por ración'],
 ['E7','Pastas: decreto vigente en parte','Decreto 2181/1975, derogado por el art. 5 del RD 176/2013, salvo los arts. 1, 2, 3, 9 y 10, el apdo. 2 del 12, los apdos. 1 y 2 del 15 y el art. 18'],
 ['E7','Norma de huevos y ovoproductos que derogó el Decreto 408/1975','Rigen el Reglamento Delegado (UE) 2023/2465, el RD 1027/2024, los Reglamentos 852/2004 y 853/2004 y el art. 9 del RD 1021/2022'],
-['E7','Mayonesa: derogación de cifras antiguas','Los 75 °C y el pH 4,2 del derogado RD 1254/1991 ya no son respuesta correcta; vale 70 °C / 2 s (o 63 °C / 20 s si es de consumo inmediato)'],
+['E7','Huevo crudo: tratamientos térmicos que permiten usarlo (art. 9.1 RD 1021/2022)','≥ 70 °C / 2 s en el centro, o equivalente (9.1.a) · 63 °C / 20 s solo si se sirve para consumo inmediato: huevo frito, tortilla (9.1.b). Sin esos tratamientos, ovoproducto (9.2). Los 75 °C y el pH 4,2 del derogado RD 1254/1991 ya no valen'],
 ['E8','Pescado: ración y frecuencia','≥ 3 raciones semanales de 125-150 g, priorizando el azul; el congelado y el enlatado tienen valor nutricional similar al fresco'],
 ['E8','Pescados con mercurio','Pez espada, atún rojo, tiburón y lucio; evitar en embarazo, lactancia y de 0 a 10 años'],
 ['E8','Anisakis: dónde se aplica la congelación','En la totalidad del producto; el pescado de aguas continentales queda fuera de la obligación; hay que informar al consumidor de que ha sido congelado'],
@@ -518,9 +518,32 @@ const L = [
 ['E14','Secado tradicional (art. 5 ter)','Umbral de actividad de agua Aw < 0,70 (no la humedad relativa del ambiente)'],
 ['E14','Errores típicos de cifra en temperaturas y muestras','63 °C, no 65 °C (cifra del derogado RD 3484/2000) · comidas testigo 7 días, no 6']
 ];
+/* Tipo de dato, según la fuente que cita la propia ficha (clasificación
+   automática, que se puede forzar con un cuarto elemento en la ficha):
+   norma · recom (recomendación oficial) · academia (material de preparación) ·
+   tecnica (técnica culinaria, criterio de oficio). Los temas de la parte general
+   y los normativos de la específica (E12-E14) son norma por definición. */
+const RDX = /\bRD\s?\d/;
+const NORMA = /\b(arts?\.|artículo|anexo|Real Decreto|Reglamento|Rgto|Ley\s|LO\s|Decreto|Orden\s|Directiva|BOE|DOG|Codex|Constitución|Estatuto|norma de calidad|DOP|IGP|categoría Extra)/i;
+const RECOM = /\b(AESAN|OMS|SENC|NAOS|recomienda|recomendación)/i;
+const ACADEMIA = /\b(material|academia|manual)\b/i;
+function tipo(f){
+  if (f[3]) return f[3];
+  if (/^G\d/.test(f[0]) || /^E1[234]$/.test(f[0])) return 'norma';
+  const t = f[1] + ' ' + f[2];
+  if (NORMA.test(t) || RDX.test(t)) return 'norma';
+  if (RECOM.test(t)) return 'recom';
+  if (ACADEMIA.test(t)) return 'academia';
+  return 'tecnica';
+}
+/* Correcciones manuales de la clasificación automática, revisadas ficha a ficha
+   (06/11/2026): datos normativos que la ficha no cita con su norma, recomendaciones
+   de AESAN u OMS y cifras del código de dietas del material de preparación. */
+const TIPO_ID = {"F-E1-18": "norma", "F-E1-19": "norma", "F-E1-41": "norma", "F-E1-42": "norma", "F-E1-43": "norma", "F-E2-01": "norma", "F-E2-02": "norma", "F-E2-03": "norma", "F-E2-04": "norma", "F-E2-05": "norma", "F-E2-14": "norma", "F-E2-16": "norma", "F-E2-18": "norma", "F-E2-19": "norma", "F-E2-20": "norma", "F-E2-21": "norma", "F-E2-22": "norma", "F-E3-02": "norma", "F-E3-03": "norma", "F-E3-04": "norma", "F-E7-05": "norma", "F-E7-06": "norma", "F-E7-07": "norma", "F-E10-02": "norma", "F-E11-04": "norma", "F-E11-15": "norma", "F-E11-16": "norma", "F-E4-01": "norma", "F-E4-02": "norma", "F-E4-03": "norma", "F-E4-04": "norma", "F-E4-05": "norma", "F-E4-06": "norma", "F-E4-07": "norma", "F-E4-08": "norma", "F-E4-09": "norma", "F-E4-10": "norma", "F-E4-12": "norma", "F-E4-13": "norma", "F-E6-01": "norma", "F-E6-02": "norma", "F-E6-05": "norma", "F-E6-06": "norma", "F-E6-07": "norma", "F-E6-08": "norma", "F-E6-09": "norma", "F-E6-10": "norma", "F-E6-11": "norma", "F-E6-12": "norma", "F-E8-08": "norma", "F-E9-05": "norma", "F-E9-06": "norma", "F-E9-08": "norma", "F-E9-09": "norma", "F-E9-10": "norma", "F-E9-11": "norma", "F-E9-17": "norma", "F-E9-18": "norma", "F-E9-19": "norma", "F-E9-23": "norma", "F-E9-25": "norma", "F-E9-37": "norma", "F-E10-04": "norma", "F-E10-05": "norma", "F-E10-17": "norma", "F-E1-01": "recom", "F-E1-02": "recom", "F-E1-03": "recom", "F-E1-04": "recom", "F-E1-05": "recom", "F-E1-09": "recom", "F-E1-10": "recom", "F-E1-11": "recom", "F-E1-13": "recom", "F-E1-29": "recom", "F-E1-31": "recom", "F-E1-32": "recom", "F-E8-06": "recom", "F-E8-07": "recom", "F-E10-15": "recom", "F-E10-18": "recom", "F-E1-17": "academia", "F-E1-34": "academia", "F-E1-35": "academia", "F-E1-36": "academia", "F-E1-38": "academia"};
 const cont = {};
 return L.map(f => {
   cont[f[0]] = (cont[f[0]] || 0) + 1;
-  return {id: 'F-' + f[0] + '-' + String(cont[f[0]]).padStart(2, '0'), tema: f[0], q: f[1], a: f[2]};
+  const id = 'F-' + f[0] + '-' + String(cont[f[0]]).padStart(2, '0');
+  return {id, tema: f[0], q: f[1], a: f[2], tipo: f[3] || TIPO_ID[id] || tipo(f)};
 });
 })();

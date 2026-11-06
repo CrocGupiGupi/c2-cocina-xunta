@@ -85,33 +85,27 @@ En la barra de direcciones aparece un icono de instalación (una pantalla con un
 
 ---
 
-## 5. Cómo se corrige (igual que el examen real)
+## 5. Cómo se corrige (convocatoria 2026-27)
 
-Convocatoria del **DOG núm. 123, de 30 de junio de 2025**:
+Convocatoria del **DOG núm. 208, de 30 de octubre de 2026** (base II.1.1). Cada ejercicio es **eliminatorio** y se corrige **por separado**:
 
-- **Primer ejercicio**: 80 preguntas — 20 de la parte general y 60 de la específica — más **5 de reserva** (2 + 3). Se califica de 0 a 60 puntos, mínimo 30. Hay que alcanzar al menos el **40 %** de aciertos.
-- **Segundo ejercicio**: 40 preguntas prácticas de la parte específica, más **3 de reserva**. Se califica de 0 a 40 puntos, mínimo 20. Hay que alcanzar el **50 %** de aciertos.
-- Ambos ejercicios se hacen **en la misma sesión**, con un máximo conjunto de **160 minutos**.
-- Cuatro respuestas por pregunta, solo una correcta.
-- **Cada error descuenta un cuarto de un acierto.** Las no contestadas ni puntúan ni penalizan.
-- Tercer ejercicio: traducción gallego–castellano, 60 minutos, apto o no apto. Exento quien acredite el **Celga 3**.
+- **Primer ejercicio**: 80 preguntas —20 de la parte general y 60 de la específica— más **5 de reserva** (2 + 3). De 0 a 60 puntos, **mínimo 30**. Hay que llegar al **40 %** de respuestas correctas una vez hechos los descuentos. En acceso libre, además, solo lo superan las mejores notas hasta **cinco veces** el número de plazas. La promoción interna está exenta de la parte general.
+- **Segundo ejercicio**: 40 preguntas prácticas de la parte específica, más **3 de reserva**. De 0 a 40 puntos, **mínimo 20**, con el **50 %** de respuestas correctas netas. **Solo se corrige si se supera el primero**; si no, el aspirante queda «no evaluable».
+- Los dos se hacen **en la misma sesión**, con un máximo conjunto de **160 minutos**. Cuatro respuestas por pregunta, una correcta. **Cada error descuenta un cuarto de un acierto**; las no contestadas ni puntúan ni penalizan.
+- **Tercer ejercicio**: prueba práctica de cocina (menú de primero, segundo y postre en 60 minutos, de 0 a 100 puntos). No se simula en la app; la guía está en el anexo A3 del temario.
+- **Prueba de gallego**: traducción castellano–gallego y gallego–castellano, 60 minutos, apto o no apto. Exento quien acredite el **Celga 3** antes de que acabe el plazo de solicitudes.
 
-La penalización se puede desactivar en Ajustes mientras estudias, pero conviene dejarla puesta para acostumbrarse a decidir cuándo merece la pena arriesgar.
+**El simulacro de la app** corrige cada ejercicio por separado y solo da por superado el completo si se superan los dos. Las bases fijan el porcentaje mínimo y los puntos mínimos, pero **no la fórmula** que convierte aciertos en puntos: la app la estima de forma que el 40 % (o el 50 %) equivalga a los 30 (o 20) puntos. Tómalo como **orientativo**, sobre todo en acceso libre, donde el corte real depende de las notas de los demás.
+
+La penalización se puede desactivar en Ajustes mientras estudias, pero conviene dejarla puesta para acostumbrarse a decidir cuándo merece la pena arriesgar. En los simulacros se aplica siempre.
 
 ---
 
 ## 6. Estado del banco de preguntas
 
-**1.947 preguntas** bilingües a 27 de octubre de 2026 (5 de ellas ocultas: las 4 del tema 15 suprimido y E12-083, irrecuperable).
+Bilingüe, revisado en octubre y noviembre de 2026. El recuento por tema se ve en la propia app (Estadísticas) y con `node tools/validar_preguntas.js`. Las preguntas importadas de los tests de academia que no se han podido contrastar llevan un aviso y se pueden excluir en Ajustes con «Solo preguntas verificadas».
 
-| Bloque | Preguntas |
-|---|---|
-| Parte general (temas G1-G8) | 590 |
-| Parte específica (temas E1-E14) | 1.353 |
-
-El reparto por tema se ve en la propia app (Estadísticas) y con `node tools/validar_preguntas.js`.
-
-El tema 15 (CENPOS) **fue suprimido del programa** por la Resolución de 26/01/2026 (DOG 17, de 27/01/2026). Sus 4 preguntas quedan ocultas en el banco (`inc:1`) y no salen en los test; si el tema volviera en la convocatoria 2026-27, se reactivan quitando esa marca.
+El tema 15 del programa antiguo (CENPOS) no figura en el programa 2026-27; sus preguntas están retiradas del banco.
 
 ## 7. Añadir más preguntas
 

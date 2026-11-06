@@ -6,18 +6,23 @@
    cache:'reload' para saltarse también la caché HTTP del navegador, y el
    index.html se sirve siempre desde la red cuando la hay, de modo que las
    referencias a la versión nueva lleguen aunque el resto esté cacheado. */
-const CACHE = 'auxcocina-v112';
-const FILES = ['./','./index.html','./fuentes/barlow-condensed-latin-600-normal.woff2','./fuentes/barlow-condensed-latin-700-normal.woff2','./fuentes/source-sans-3-latin-400-normal.woff2','./fuentes/source-sans-3-latin-600-normal.woff2','./fuentes/source-sans-3-latin-700-normal.woff2','./app.js?v=112','./convocatoria.js?v=112','./preguntas.js?v=112','./fichas.js?v=112','./temario.js?v=112','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png'];
+const CACHE = 'auxcocina-v113';
+const FILES = ['./','./index.html','./fuentes/barlow-condensed-latin-600-normal.woff2','./fuentes/barlow-condensed-latin-700-normal.woff2','./fuentes/source-sans-3-latin-400-normal.woff2','./fuentes/source-sans-3-latin-600-normal.woff2','./fuentes/source-sans-3-latin-700-normal.woff2','./app.js?v=113','./convocatoria.js?v=113','./preguntas.js?v=113','./fichas.js?v=113','./temario.js?v=113','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png'];
 
+/* Instalación todo o nada. Si falla la descarga de un fichero esencial, la
+   instalación falla y el navegador sigue con la versión anterior, que conserva
+   su caché completa; solo se activa una versión cuando la nueva está entera.
+   Las fuentes tipográficas no bloquean: sin ellas la app usa las del sistema. */
+const OPCIONALES = FILES.filter(f => f.startsWith('./fuentes/'));
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE)
-      .then(c => Promise.all(FILES.map(f =>
-        fetch(new Request(f, { cache: 'reload' }))
-          .then(r => (r && r.ok) ? c.put(f, r) : null)
-          .catch(() => null)
-      )))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE).then(c => Promise.all(FILES.map(f =>
+      fetch(new Request(f, { cache: 'reload' })).then(r => {
+        if (!r || !r.ok) throw new Error('descarga fallida: ' + f);
+        return c.put(f, r);
+      }).catch(err => { if (!OPCIONALES.includes(f)) throw err; })
+    ))).then(() => self.skipWaiting())
+      .catch(err => caches.delete(CACHE).then(() => { throw err; }))
   );
 });
 
@@ -63,6 +68,8 @@ self.addEventListener('fetch', e => {
         caches.open(CACHE).then(c => c.put(e.request, copia));
       }
       return resp;
-    }).catch(() => caches.match('./index.html')))
+    }))
+    /* Sin conexión y sin copia: se deja fallar. Devolver aquí el index.html
+       haría que el navegador intentara ejecutar HTML como si fuera un script. */
   );
 });
