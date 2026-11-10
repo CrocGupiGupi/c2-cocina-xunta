@@ -150,7 +150,7 @@ const LS='auxcocina_v1';
 const FECHA=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const HOY=()=>FECHA(new Date());
 const D={
-  cfg:{lang:'es',theme:'auto',penal:true,barajar:true,fs:16,soloVerif:false},
+  cfg:{lang:'es',theme:'auto',penal:true,barajar:true,fs:16,soloVerif:false,fnue:10},
   q:{},          // id -> {v:vistas, o:ok, k:ko, ef:facilidad, iv:intervalo, due:'YYYY-MM-DD', l:lapsos}
   marc:[],       // ids marcados
   hist:{},       // 'YYYY-MM-DD' -> {n:hechas, o:aciertos}
@@ -198,7 +198,8 @@ function sanearCfg(c){
     penal:typeof o.penal==='boolean'?o.penal:d.penal,
     barajar:typeof o.barajar==='boolean'?o.barajar:d.barajar,
     fs:Math.min(24,Math.max(14,+o.fs||d.fs)),
-    soloVerif:typeof o.soloVerif==='boolean'?o.soloVerif:d.soloVerif
+    soloVerif:typeof o.soloVerif==='boolean'?o.soloVerif:d.soloVerif,
+    fnue:[5,10,15,20,30,50].includes(+o.fnue)?+o.fnue:d.fnue // fichas nuevas al día
   };
 }
 function cargar(){
@@ -229,6 +230,10 @@ function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on');clea
 function hhmmss(s){s=Math.max(0,s|0);const h=s/3600|0,m=(s%3600)/60|0,g=s%60;return (h?h+':':'')+String(m).padStart(2,'0')+':'+String(g).padStart(2,'0');}
 function sumar(d){const f=new Date();f.setDate(f.getDate()+d);return FECHA(f);}
 const tx=(es,gl)=>S.cfg.lang==='gl'?gl:es;
+/* Espera a que se deje de teclear: resaltar en un tema de 700 KB a cada letra bloquea el móvil. */
+const retardo=(fn,ms)=>{let h;return(...a)=>{clearTimeout(h);h=setTimeout(()=>fn(...a),ms);};};
+/* La racha solo cuenta si se estudió hoy o ayer. */
+const rachaViva=()=>(S.racha.d===HOY()||S.racha.d===sumar(-1))?S.racha.n:0;
 const BANCO=(window.BANCO||[]);
 function txt(p){return p[S.cfg.lang]||p.es||p.gl;}
 
@@ -336,7 +341,7 @@ function tick(){
   const r=$('#reloj'); if(r){r.textContent=hhmmss(J.restante);r.classList.toggle('alerta',J.restante<300);}
   if(J.restante<=0){clearInterval(J._tk);toast(t('tiempoAgotado'));finalizar();}
 }
-function pintarPlay(){
+function pintarPlay(mantener){
   const p=J.lista[J.i], c=txt(p), ord=J.orden[J.i], r=J.resp[J.i];
   const marcada=S.marc.includes(p.id);
   const total=J.lista.length;
@@ -344,7 +349,7 @@ function pintarPlay(){
   let h=`<div id="barra">
     <div class="brow">
       <span>${t('pregDe')} <b>${J.i+1}</b> ${t('de')} ${total}</span>
-      ${J.limite?`<span id="reloj" class="${J.restante<300?'alerta':''}">${hhmmss(J.restante)}</span>`:`<span>${contestadas}/${total}</span>`}
+      ${J.limite&&!J.hecho?`<span id="reloj" class="${J.restante<300?'alerta':''}">${hhmmss(J.restante)}</span>`:`<span>${contestadas}/${total}</span>`}
       <button class="chip mini" id="bSalir">${t('salir')}</button>
     </div>
     <div class="prog"><i style="width:${(J.i)/total*100}%"></i></div>
@@ -410,28 +415,33 @@ function pintarPlay(){
       if(!J.srs)planificar(p.id,oi===p.r?2:0);
       guardar();
     }
-    pintarPlay();
+    pintarPlay(true);
   });
   $('#v-play').querySelectorAll('[data-sr]').forEach(b=>b.onclick=()=>{
     planificar(p.id,+b.dataset.sr); guardar(); avanzar();
   });
   const bv=$('#bVerTema'); if(bv)bv.onclick=()=>{J._vuelta=true;verEnTema(p);};
-  $('#bNota').onclick=()=>{J.notaAb=(J.notaAb===p.id)?null:p.id;pintarPlay();};
+  $('#bNota').onclick=()=>{J.notaAb=(J.notaAb===p.id)?null:p.id;pintarPlay(true);};
   const ng=$('#nGuardar'); if(ng)ng.onclick=()=>{
     const v=$('#tNota').value.trim();
     if(v)S.notas[p.id]={t:v,f:HOY()}; else delete S.notas[p.id];
-    J.notaAb=null;guardar();pintarPlay();toast(tx('Nota guardada','Nota gardada'));};
-  const nb=$('#nBorrar'); if(nb)nb.onclick=()=>{delete S.notas[p.id];J.notaAb=null;guardar();pintarPlay();};
+    J.notaAb=null;guardar();pintarPlay(true);toast(tx('Nota guardada','Nota gardada'));};
+  const nb=$('#nBorrar'); if(nb)nb.onclick=()=>{delete S.notas[p.id];J.notaAb=null;guardar();pintarPlay(true);};
   const nt=$('#nTema'); if(nt)nt.onclick=()=>{J._vuelta=true;verEnTema(p);};
   const bp=$('#bPrev'); if(bp)bp.onclick=()=>{J.i--;pintarPlay();window.scrollTo(0,0);};
   $('#bNext').onclick=avanzar;
   $('#bMarcar').onclick=()=>{
     const k=S.marc.indexOf(p.id);
     if(k<0)S.marc.push(p.id); else S.marc.splice(k,1);
-    guardar(); pintarPlay();
+    guardar(); pintarPlay(true);
   };
-  $('#bSalir').onclick=()=>{if(confirm(t('salirConf'))){clearInterval(J._tk);J=null;ir('inicio');}};
-  window.scrollTo(0,0);
+  $('#bSalir').onclick=()=>{
+    if(J.hecho){J=null;ir('inicio');return;} // revisión de un test ya corregido: no hay nada que perder
+    if(confirm(t('salirConf'))){clearInterval(J._tk);J=null;borrarCurso();ir('inicio');}};
+  /* Al contestar, marcar o anotar no se vuelve arriba: se enseña la explicación. */
+  if(!mantener)window.scrollTo(0,0);
+  else{const ex=$('#v-play .exp'); if(ex&&ex.scrollIntoView)ex.scrollIntoView({block:'nearest'});}
+  guardarCurso();
 }
 function avanzar(){
   if(J.i<J.lista.length-1){J.i++;pintarPlay();}
@@ -439,6 +449,7 @@ function avanzar(){
 }
 function finalizar(){
   clearInterval(J._tk);
+  if(J.hecho){pintarFin(...J.res);ir('fin');return;} // ya corregido: solo se vuelve al resultado
   let ok=0,ko=0,bl=0;
   J.lista.forEach((p,i)=>{
     const r=J.resp[i];
@@ -455,6 +466,8 @@ function finalizar(){
   }
   S.ses.unshift({f:HOY(),n:J.lista.length,ok,ko,bl,seg,tit:J.titulo});
   S.ses=S.ses.slice(0,40);
+  J.hecho=true; J.res=[ok,ko,bl,seg];
+  borrarCurso();
   guardar();
   pintarFin(ok,ko,bl,seg);
   ir('fin');
@@ -589,11 +602,12 @@ function pintarInicio(){
   const pend=pendientesHoy().length, fall=falladas().length;
   const gl=S.cfg.lang==='gl';
   let h=`<div class="reg">
-    <div><b>${S.racha.d===HOY()||S.racha.d===sumar(-1)?S.racha.n:0}</b><span>${t('racha')} · ${t('dias')}</span></div>
+    <div><b>${rachaViva()}</b><span>${t('racha')} · ${t('dias')}</span></div>
     <div><b>${h0.n}</b><span>${t('hoy')}</span></div>
     <div><b>${tv?Math.round(to/tv*100):0}%</b><span>${t('acierto')}</span></div>
     <div><b>${tv}</b><span>${t('hechas')}</span></div>
   </div>`;
+  h+=avisoCurso();
   h+=avisoCopia();
   if(pend)h+=`<button class="etiq" id="qPend"><b>${pend}</b><span>${t('pendientes')}</span><small>${t('repasoS')}</small></button>`;
   h+=bloqueHoy();
@@ -629,6 +643,8 @@ function pintarInicio(){
   $('#qFichas').onclick=()=>ir('fichas');
   $('#qAjustes').onclick=()=>ir('ajustes');
   ligarHoy();
+  const cs=$('#cuSeguir'); if(cs)cs.onclick=()=>{if(!retomarCurso())pintarInicio();};
+  const cn=$('#cuNo'); if(cn)cn.onclick=()=>{borrarCurso();pintarInicio();};
   const ac=$('#avCopia'); if(ac)ac.onclick=()=>guardarCopia().then(ok=>{if(ok)pintarInicio();});
   const al=$('#avLuego'); if(al)al.onclick=()=>{S.bk.s=sumar(3);guardar();pintarInicio();};
   const a=$('#qPend'); if(a)a.onclick=()=>iniciar({lista:mezclar(pendientesHoy()).slice(0,30),modo:'estudio',srs:true,titulo:t('pendientes')});
@@ -688,6 +704,52 @@ function pintarTest(){
 
 const PARTE1={n:80,max:60,minP:30,min:40,get tit(){return t('ej1');}};
 const PARTE2={n:40,max:40,minP:20,min:50,get tit(){return t('ej2');}};
+/* ---------- test a medias ----------
+   El test en curso se guarda en el dispositivo a cada paso. Si la pestaña se
+   cierra o el móvil la descarta (un simulacro dura 160 minutos), se puede
+   retomar desde Inicio. El reloj de un examen no se detiene: su hora de fin
+   es fija, como en el examen real. */
+const LSC=LS+'-curso';
+function guardarCurso(){
+  if(!J||J.hecho||J.lista.length<5)return;
+  try{localStorage.setItem(LSC,JSON.stringify({ids:J.lista.map(p=>p.id),resp:J.resp,orden:J.orden,i:J.i,modo:J.modo,titulo:J.titulo,
+    of:J.oficial?J.oficial.partes.map(pa=>pa===PARTE2?'P2':'P1'):null,srs:!!J.srs,diaria:!!J.diaria,t0:J.t0,limite:J.limite,fin:J.fin}));}catch(e){}
+}
+function borrarCurso(){try{localStorage.removeItem(LSC);}catch(e){}}
+function leerCurso(){
+  try{
+    const c=JSON.parse(localStorage.getItem(LSC)||'null');
+    if(!c||!Array.isArray(c.ids)||!c.ids.length||!Array.isArray(c.resp)||c.resp.length!==c.ids.length)return null;
+    if(!Array.isArray(c.orden)||c.orden.length!==c.ids.length)return null;
+    const porId=new Map(BANCO.map(p=>[p.id,p])), lista=c.ids.map(id=>porId.get(id));
+    if(lista.some(p=>!p))return null; // el banco cambió y falta alguna pregunta: no se puede retomar
+    return {c,lista};
+  }catch(e){return null;}
+}
+function retomarCurso(){
+  const x=leerCurso(); if(!x){borrarCurso();return false;}
+  const c=x.c;
+  J={lista:x.lista,i:Math.min(Math.max(0,c.i|0),x.lista.length-1),resp:c.resp,orden:c.orden,
+    modo:c.modo==='examen'?'examen':'estudio',titulo:c.titulo||'',
+    oficial:Array.isArray(c.of)?{partes:c.of.map(k=>k==='P2'?PARTE2:PARTE1)}:null,srs:!!c.srs,diaria:!!c.diaria,
+    t0:+c.t0||Date.now(),limite:+c.limite||0,restante:0,corregida:false,pausa:false,fin:+c.fin||0};
+  if(J.fin)J.restante=Math.max(0,Math.round((J.fin-Date.now())/1000));
+  ir('play');pintarPlay();
+  if(J.limite){clearInterval(J._tk);J._tk=setInterval(tick,1000);tick();}
+  return true;
+}
+function avisoCurso(){
+  if(J)return '';
+  const x=leerCurso(); if(!x)return '';
+  const c=x.c, hechas=c.resp.filter(r=>r!==null).length;
+  const reloj=c.fin?' · '+(c.fin>Date.now()?tx('el reloj sigue corriendo','o reloxo segue correndo'):tx('se acabó el tiempo: se corregirá al abrirlo','acabouse o tempo: corrixirase ao abrilo')):'';
+  return `<div class="aviso" role="note">
+    <div><b>${tx('Tienes un test a medias','Tes un test a medias')}</b>
+    <span>${esc(c.titulo||'Test')} · ${hechas}/${c.ids.length} ${tx('contestadas','contestadas')}${reloj}</span></div>
+    <div class="fila"><button class="btn sm" id="cuSeguir">${tx('Continuar','Continuar')}</button>
+    <button class="chip mini" id="cuNo">${tx('Descartar','Descartar')}</button></div></div>`;
+}
+
 function pintarSimulacro(){
   const g=pool({parte:'general'}).length, e=pool({parte:'especifica'}).length;
   const pr=pool({parte:'especifica',tipo:'practica'}).length;
@@ -785,7 +847,7 @@ function pintarRepaso(){
   $('#v-repaso').querySelectorAll('[data-dn]').forEach(b=>b.onclick=()=>{
     const p=BANCO.find(x=>x.id===b.dataset.dn);if(p)iniciar({lista:[p],modo:'estudio',titulo:t('marcadas')});});
   $('#v-repaso').querySelectorAll('[data-dt]').forEach(b=>b.onclick=()=>{
-    const p=BANCO.find(x=>x.id===b.dataset.dt);if(p)verEnTema(p);});
+    const p=BANCO.find(x=>x.id===b.dataset.dt);if(p){verEnTema(p);vueltaA='repaso';}});
 }
 
 function pintarStats(){
@@ -801,7 +863,7 @@ function pintarStats(){
     <tr><td>${t('dominadas')}</td><td style="color:var(--ok)">${dom}</td></tr>
     <tr><td>${t('flojas')}</td><td style="color:var(--ko)">${flo}</td></tr>
     <tr><td>${t('sinVer')}</td><td>${BANCO.length-resp}</td></tr>
-    <tr><td>${t('racha')}</td><td>${S.racha.n} ${t('dias')}</td></tr>
+    <tr><td>${t('racha')}</td><td>${rachaViva()} ${t('dias')}</td></tr>
   </table></div>`;
 
   // últimos 14 días
@@ -843,8 +905,8 @@ function pintarAjustes(){
   ${htmlCopia()}
   <div class="card"><h3>${S.cfg.lang==='gl'?'Sobre a aplicación':'Sobre la aplicación'}</h3>
    <p class="mini">${S.cfg.lang==='gl'
-     ? 'Preparación do proceso selectivo para o ingreso no corpo de auxiliares de carácter técnico de Administración especial da Xunta de Galicia, subgrupo C2, escala auxiliar de cociña. Programa do DOG nº 123 do 30 de xuño de 2025.'
-     : 'Preparación del proceso selectivo para el ingreso en el cuerpo de auxiliares de carácter técnico de Administración especial de la Xunta de Galicia, subgrupo C2, escala auxiliar de cocina. Programa del DOG nº 123 de 30 de junio de 2025.'}</p>
+     ? 'Preparación do proceso selectivo para o ingreso no corpo de auxiliares de carácter técnico de Administración especial da Xunta de Galicia, subgrupo C2, escala auxiliar de cociña. Programa do DOG nº 208 do 30 de outubro de 2026 (convocatoria 2026-27).'
+     : 'Preparación del proceso selectivo para el ingreso en el cuerpo de auxiliares de carácter técnico de Administración especial de la Xunta de Galicia, subgrupo C2, escala auxiliar de cocina. Programa del DOG nº 208 de 30 de octubre de 2026 (convocatoria 2026-27).'}</p>
    <p class="mini">${BANCO.length} ${t('preg')} · ${Object.keys(TEMAS).length} ${S.cfg.lang==='gl'?'temas':'temas'}</p>
    <p class="mini">${S.cfg.lang==='gl'?'Todo o teu progreso gárdase só neste dispositivo.':'Todo tu progreso se guarda solo en este dispositivo.'}</p>
   </div>`;
@@ -939,13 +1001,13 @@ function pintarTemario(){
   $('#v-temario').querySelectorAll('[data-tema]').forEach(b=>b.onclick=()=>abrirTema(b.dataset.tema));
   if($('#qConv'))$('#qConv').onclick=()=>abrirTema('A0');
   const q=$('#bq');
-  q.oninput=()=>{
+  q.oninput=retardo(()=>{
     const v=q.value.trim();
     if(v.length<3){$('#bres').innerHTML='';$('#blista').style.display='';return;}
     $('#blista').style.display='none';
     $('#bres').innerHTML=buscarTemario(v);
     $('#bres').querySelectorAll('[data-ir]').forEach(b=>b.onclick=()=>abrirTema(b.dataset.ir,0,v));
-  };
+  },200);
 }
 /* Los anexos se enseñan como tarjetas, igual que los temas, pero sin número
    de preguntas: no son materia de examen, son material de consulta. */
@@ -991,19 +1053,22 @@ function tarjetaTema(k){
     <span class="tx"><b>${esc(nom(k))}</b><small>${n} ${t('secciones')} · ${pool({temas:[k]}).length} ${t('preg')}</small></span>
     <span class="fl">›</span></button>`;
 }
+/* El HTML del temario trae «<» y «&» como entidades (Aw &lt; 0,70). Al quitar
+   las etiquetas hay que deshacerlas, o el fragmento las enseña tal cual. */
+const desEnt=s=>s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
 function buscarTemario(q){
   const n=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const nq=n(q); let h='',total=0;
-  Object.keys(TEMAS).forEach(k=>{
-    const d=TEM[k]; if(!d)return;
-    const txt=d.x.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+  Object.keys(TEMAS).concat(Object.keys(ANX)).forEach(k=>{
+    const d=doc(k); if(!d)return;
+    const txt=desEnt(d.x.replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ');
     const nt=n(txt); let pos=nt.indexOf(nq), c=0;
     while(pos>=0&&c<3){
       const a=Math.max(0,pos-70), b=Math.min(txt.length,pos+q.length+110);
       let frag=esc(txt.slice(a,b));
       const re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig');
       frag=frag.replace(re,'<mark>$1</mark>');
-      h+=`<div class="res-b" data-ir="${k}"><b>${k} · ${esc(nom(k))}</b><p>${a>0?'…':''}${frag}${b<txt.length?'…':''}</p></div>`;
+      h+=`<div class="res-b" data-ir="${k}"><b>${esAnexo(k)?esc(d.t||k):k+' · '+esc(nom(k))}</b><p>${a>0?'…':''}${frag}${b<txt.length?'…':''}</p></div>`;
       c++; total++;
       pos=nt.indexOf(nq,pos+q.length);
     }
@@ -1035,8 +1100,11 @@ function irAAncla(destino){
   return el;
 }
 
+let lecK=null;     // documento abierto en el lector (tema o anexo)
+let vueltaA=null;  // vista a la que vuelve «‹» cuando se llegó al tema desde fichas o repaso
 function abrirTema(k,scrollY,resaltar){
   const d=doc(k); if(!d){toast(t('sinPreg'));return;}
+  lecK=k; vueltaA=null;
   if(!esAnexo(k)){S.lec={tema:k,y:0}; guardar();}
   let cuerpo=d.x;
   if(resaltar&&resaltar.length>2){
@@ -1064,7 +1132,10 @@ function abrirTema(k,scrollY,resaltar){
   }
   ir('lectura');
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==='temario'));
-  $('#lVolver').onclick=()=>{if(J&&J._vuelta){J._vuelta=false;ir('play');pintarPlay();}else ir('temario');};
+  $('#lVolver').onclick=()=>{
+    if(J&&J._vuelta){J._vuelta=false;ir('play');pintarPlay();}
+    else if(vueltaA){const v=vueltaA;vueltaA=null;ir(v);}
+    else ir('temario');};
   const ll=$('#lLeido'); if(ll)ll.onclick=()=>{
     if(S.leidos[k])delete S.leidos[k]; else S.leidos[k]=HOY();
     guardar();ll.classList.toggle('on',!!S.leidos[k]);ll.setAttribute('aria-pressed',!!S.leidos[k]);
@@ -1089,7 +1160,7 @@ function abrirTema(k,scrollY,resaltar){
     if(irAAncla(destino))ev.preventDefault();
   });
   const lq=$('#lq');
-  lq.oninput=()=>{
+  lq.oninput=retardo(()=>{
     const v=lq.value.trim();
     let c=cuerpo;
     if(v.length>2){
@@ -1107,7 +1178,7 @@ function abrirTema(k,scrollY,resaltar){
       });
       const m=$('#lcuerpo mark'); if(m)m.scrollIntoView({behavior:'smooth',block:'center'});
     }
-  };
+  },250);
   window.scrollTo(0,scrollY||0);
 }
 
@@ -1120,7 +1191,8 @@ function abrirTema(k,scrollY,resaltar){
   let tick;
   addEventListener('scroll',()=>{
     b.classList.toggle('on', scrollY>420 && $('#v-lectura').classList.contains('on'));
-    if($('#v-lectura').classList.contains('on')&&S.lec){
+    /* Solo se recuerda la posición del tema leído: un anexo abierto no debe pisarla. */
+    if($('#v-lectura').classList.contains('on')&&S.lec&&S.lec.tema===lecK){
       clearTimeout(tick); tick=setTimeout(()=>{S.lec.y=scrollY;guardar();},400);
     }
   },{passive:true});
@@ -1141,7 +1213,8 @@ const NOV=[
  {k:'l112',es:'Ley 5/2025: art. 112 bis de la Ley 1/2024',gl:'Lei 5/2025: art. 112 bis da Lei 1/2024',temas:['E12'],re:[/112 bis/i]},
  {k:'rd142',es:'RD 142/2026: seis normas de calidad (pan, derivados cárnicos, vinagres…)',gl:'RD 142/2026: seis normas de calidade (pan, derivados cárnicos, vinagres…)',re:[/142\/2026/]},
  {k:'r343',es:'Reglamento Delegado (UE) 2026/343: carne de aves',gl:'Regulamento Delegado (UE) 2026/343: carne de aves',re:[/2026\/343/]},
- {k:'rd1082',es:'RD 1082/2025: denominaciones comerciales de la pesca',gl:'RD 1082/2025: denominacións comerciais da pesca',re:[/1082\/2025/]}
+ {k:'rd1082',es:'RD 1082/2025: denominaciones comerciales de la pesca',gl:'RD 1082/2025: denominacións comerciais da pesca',re:[/1082\/2025/]},
+ {k:'rd950',es:'RD 950/2026: alimentación en centros públicos y residencias (y cambios al RD 315/2025)',gl:'RD 950/2026: alimentación en centros públicos e residencias (e cambios no RD 315/2025)',re:[/950\/2026/]}
 ];
 let _nov=null;
 function novDe(p){
@@ -1513,7 +1586,7 @@ function arrancarFichas(fc){
 }
 /* Lleva de la ficha al apartado del temario donde más se concentran sus
    palabras (el mismo buscador que usan las preguntas). */
-function fichaEnTema(f){verEnTema({tema:f.tema,r:0,ref:'',es:{q:f.q,o:[f.a]}});}
+function fichaEnTema(f){verEnTema({tema:f.tema,r:0,ref:'',es:{q:f.q,o:[f.a]}});vueltaA='fichas';}
 function listaFichas(q){
   const nq=normTxt(q||'');
   const temas=Object.keys(TEMAS).filter(k=>FICH.some(f=>f.tema===k));
@@ -1542,7 +1615,7 @@ function pintarFichas(){
     <label class="row"><span>${tx('Fichas nuevas al día','Fichas novas ao día')}<small>${tx('Más fichas nuevas, más repasos los días siguientes','Máis fichas novas, máis repasos os días seguintes')}</small></span>
       <select id="fNue">${[5,10,15,20,30,50].map(v=>`<option ${v===(S.cfg.fnue||10)?'selected':''}>${v}</option>`).join('')}</select></label></div>`;
   h+=n?`<button class="btn" id="fGo">${tx('Empezar','Comezar')} · ${Math.min(n,30)}<small>${fc.due.length} ${tx('de repaso','de repaso')} + ${fc.nuevas.length} ${tx('nuevas','novas')}${n>30?' · '+tx('en tandas de 30','en tandas de 30'):''}</small></button>`
-      :`<div class="vacio">${fTema?tx('No queda ninguna ficha de este tema hoy.','Non queda ningunha ficha deste tema hoxe.'):tx('Hoy no queda ninguna ficha. Vuelve mañana.','Hoxe non queda ningunha ficha. Volve mañá.')}</div>`;
+      :`<div class="vacio">${(fTema||fTipo)?tx('No queda ninguna ficha con ese filtro hoy.','Non queda ningunha ficha con ese filtro hoxe.'):tx('Hoy no queda ninguna ficha. Vuelve mañana.','Hoxe non queda ningunha ficha. Volve mañá.')}</div>`;
   h+=`<div class="card"><h3>${tx('Todas las fichas','Todas as fichas')}</h3>
     <input class="buscar" id="fBus" type="search" placeholder="${tx('Buscar una cifra o un dato…','Buscar unha cifra ou un dato…')}" autocomplete="off">
     <div id="fLista">${listaFichas('')}</div></div>`;
@@ -1662,8 +1735,23 @@ function aplicarCfg(){
   $('#bLang').textContent=S.cfg.lang==='es'?'GL':'ES';
   aplicarTema();
 }
+/* Teclado en los test: 1-4 o A-D eligen opción, Intro o → pasa a la siguiente, ← vuelve. */
+addEventListener('keydown',ev=>{
+  if(!J||!$('#v-play').classList.contains('on')||ev.ctrlKey||ev.metaKey||ev.altKey)return;
+  if(ev.target.closest&&ev.target.closest('input,textarea,select'))return;
+  const k=ev.key.length===1?ev.key.toLowerCase():'';
+  const i=k?('1234'.indexOf(k)>=0?'1234'.indexOf(k):'abcd'.indexOf(k)):-1;
+  if(i>=0){const b=$('#v-play').querySelectorAll('.opt')[i];if(b&&!b.disabled){ev.preventDefault();b.click();}return;}
+  if(ev.key==='ArrowLeft'){const p=$('#bPrev');if(p){ev.preventDefault();p.click();}return;}
+  if(ev.key==='ArrowRight'||(ev.key==='Enter'&&!(ev.target.closest&&ev.target.closest('button,a')))){ev.preventDefault();$('#bNext').click();}
+});
 cargar(); aplicarCfg(); pedirPersistencia();
-document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{if(J&&!confirm(t('salirConf')))return;if(J){clearInterval(J._tk);J=null;}ir(b.dataset.v);});
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
+  /* Con el test ya corregido (pantalla de resultado o revisión) no hay nada que perder. */
+  if(J&&!J.hecho&&!confirm(t('salirConf')))return;
+  if(J){clearInterval(J._tk);if(!J.hecho)borrarCurso();J=null;}
+  vueltaA=null;
+  ir(b.dataset.v);});
 $('#bLang').onclick=()=>{S.cfg.lang=S.cfg.lang==='es'?'gl':'es';guardar();aplicarCfg();
   const v=document.querySelector('.view.on').id.slice(2);
   if(v==='play'&&J)pintarPlay(); else ir(v);};

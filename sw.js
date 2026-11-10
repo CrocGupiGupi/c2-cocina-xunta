@@ -6,8 +6,8 @@
    cache:'reload' para saltarse también la caché HTTP del navegador, y el
    index.html se sirve siempre desde la red cuando la hay, de modo que las
    referencias a la versión nueva lleguen aunque el resto esté cacheado. */
-const CACHE = 'auxcocina-v114';
-const FILES = ['./','./index.html','./fuentes/barlow-condensed-latin-600-normal.woff2','./fuentes/barlow-condensed-latin-700-normal.woff2','./fuentes/source-sans-3-latin-400-normal.woff2','./fuentes/source-sans-3-latin-600-normal.woff2','./fuentes/source-sans-3-latin-700-normal.woff2','./app.js?v=114','./convocatoria.js?v=114','./preguntas.js?v=114','./fichas.js?v=114','./temario.js?v=114','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png'];
+const CACHE = 'auxcocina-v115';
+const FILES = ['./','./index.html','./fuentes/barlow-condensed-latin-600-normal.woff2','./fuentes/barlow-condensed-latin-700-normal.woff2','./fuentes/source-sans-3-latin-400-normal.woff2','./fuentes/source-sans-3-latin-600-normal.woff2','./fuentes/source-sans-3-latin-700-normal.woff2','./app.js?v=115','./convocatoria.js?v=115','./preguntas.js?v=115','./fichas.js?v=115','./temario.js?v=115','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png'];
 
 /* Instalación todo o nada. Si falla la descarga de un fichero esencial, la
    instalación falla y el navegador sigue con la versión anterior, que conserva

@@ -239,5 +239,5 @@ window.CONVOCATORIA = {
    "Aparece rotulada como **II.1.14** y referida desde la base I.4.1 como **II.1.1.3**, que es la del tercer ejercicio. Por su posición debería ser **II.1.1.4**. No afecta al contenido, pero conviene saberlo si alguien cita la base por su número."
   ]
  ],
- "comprobado": "30 de octubre de 2026"
+ "comprobado": "10 de noviembre de 2026"
 };

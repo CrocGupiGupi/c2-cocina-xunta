@@ -516,7 +516,28 @@ const L = [
 ['E14','Dónde se define cada cosa','Colectividad: RD 1021/2022 (art. 2.2.c) · comida preparada: art. 2.h) del RD 1086/2020 · el art. 6 del RD 1021/2022 remite al art. 30 del RD 1086/2020'],
 ['E14','Madera en cocina (art. 5 bis)','Permitida en tres supuestos tasados: mesas de panadería, cámaras de fermentación y tajos de despiece; maderas concretas (haya, roble, pino rojo) y siempre limpia y en buen estado'],
 ['E14','Secado tradicional (art. 5 ter)','Umbral de actividad de agua Aw < 0,70 (no la humedad relativa del ambiente)'],
-['E14','Errores típicos de cifra en temperaturas y muestras','63 °C, no 65 °C (cifra del derogado RD 3484/2000) · comidas testigo 7 días, no 6']
+['E14','Errores típicos de cifra en temperaturas y muestras','63 °C, no 65 °C (cifra del derogado RD 3484/2000) · comidas testigo 7 días, no 6'],
+/* ---------- RD 950/2026 (BOE 06/11/2026): centros públicos, hospitales y residencias ---------- */
+['E1','RD 950/2026: publicación y entrada en vigor','BOE de 06/11/2026 · en vigor a los doce meses, el 06/11/2027 · publicado antes del corte, así que entra','norma'],
+['E1','RD 950/2026: a qué centros se aplica','Administraciones y centros públicos (también hospitales y residencias que cocinan con medios propios) y centros sanitarios y sociosanitarios privados para personas dependientes o con necesidades especiales. Los escolares siguen con el RD 315/2025','norma'],
+['E1','RD 950/2026: frutas y hortalizas frescas y de temporada','Al menos el 90 % de las raciones de fruta y el 30 % de las de hortalizas','norma'],
+['E1','RD 950/2026: canal corto y producción ecológica','Canal corto: al menos el 10 % de las raciones de frutas y hortalizas · ecológico: al menos el 25 % del coste (10 % los cuatro primeros años)','norma'],
+['E1','RD 950/2026, una sola comida principal (art. 7): pescado, carne y huevos','Pescado ≥ 2 raciones/semana · carne ≤ 2 (roja ≤ 1, procesada ≤ 2 al mes) · huevos ≤ 2 · al menos un día de solo proteína vegetal','norma'],
+['E1','RD 950/2026, pensión completa (art. 8): hortalizas, frutas y cereales','Hortalizas ≥ 3 raciones al día · frutas 2-3 al día · cereales 3-6 al día, preferentemente integrales','norma'],
+['E1','RD 950/2026, pensión completa (art. 8): legumbres, pescado, huevos y carne','Legumbres ≥ 4/semana · pescado ≥ 3 · huevos ≤ 4 · carne ≤ 3 (roja ≤ 2, procesada ≤ 3 al mes) · lácteos ≤ 3 al día · frutos secos ≥ 3/semana','norma'],
+['E1','Frituras: RD 950/2026 frente a RD 315/2025','RD 950/2026: máximo 2 raciones a la semana · RD 315/2025 (escolar): máximo 1 a la semana','norma'],
+['E1','Precocinados: RD 950/2026 frente a RD 315/2025','RD 950/2026: 1 al mes con una sola comida principal y 3 al mes en pensión completa · RD 315/2025 (escolar): 1 al mes','norma'],
+['E1','RD 950/2026: desayuno en pensión completa','Alimentos de al menos tres de seis grupos: frutas frescas, cereales integrales, lácteos sin azúcar, grasas saludables, bebidas y alimentos proteicos','norma'],
+['E1','RD 950/2026: cribado nutricional','A todas las personas ingresadas o residentes, dentro de las primeras 24-48 horas','norma'],
+['E1','RD 950/2026: reparto de las ingestas en centros sanitarios y sociosanitarios','A lo largo de un periodo mínimo de doce horas, con horarios de comida protegidos','norma'],
+['E1','RD 950/2026: rotación mínima de la dieta basal','14 días en centros hospitalarios · 28 días en centros residenciales','norma'],
+['E1','RD 950/2026, anexo: umbrales de un alimento sólido','Por 100 g: 300 kcal · 13,5 g de azúcares · 3 g de saturados · 0,9 g de sal (bebidas, por 100 ml: la mitad)','norma'],
+['E1','RD 950/2026: aceite para aliñar, cocinar y freír','Aliñar ensaladas: oliva virgen o virgen extra, y preferentemente para cocinar · freír: preferentemente oliva o girasol alto oleico','norma'],
+['E1','RD 950/2026: frutos secos y disfagia','Con disfagia o textura modificada, ni enteros ni troceados: solo con textura adaptada · en menores de seis años, no enteros','norma'],
+['E1','RD 950/2026: máquinas expendedoras','70 % del espacio para producto saludable, en las filas centrales · bebidas calientes: 0 g de azúcar por defecto y máximo 5 g','norma'],
+['E1','Qué cambia el RD 950/2026 en el RD 315/2025','Incluye el primer ciclo de infantil (art. 2), añade el art. 9.4 y los arts. 9 bis (lactancia), 9 ter (desayunos y meriendas) y 9 quater (plásticos); efectos desde el 06/11/2027','norma'],
+['E1','Primer ciclo de infantil (art. 9.4 del RD 315/2025): arroz y sal','Arroz siempre blanco hasta los tres años (arsénico inorgánico del integral) · sin sal añadida en menores de doce meses','norma'],
+['E1','Primer ciclo de infantil (art. 9.4 del RD 315/2025): nitratos','Espinacas, acelgas y remolacha: no antes del primer año · borraja: no antes de los tres años','norma']
 ];
 /* Tipo de dato, según la fuente que cita la propia ficha (clasificación
    automática, que se puede forzar con un cuarto elemento en la ficha):
